@@ -26,6 +26,16 @@ TMP_DIR = '/var/lib/sharelatex/tmp'
 
 settings =
 
+	OpenID:
+		issuer: 'https://auth.aliens-lyon.fr/auth/realms/master'
+		authorization_endpoint: 'https://auth.aliens-lyon.fr/auth/realms/master/protocol/openid-connect/auth'
+		token_endpoint: 'https://auth.aliens-lyon.fr/auth/realms/master/protocol/openid-connect/token'
+		jwks_uri: 'https://auth.aliens-lyon.fr/auth/realms/master/protocol/openid-connect/certs'
+
+		client_id: (process.env.OPENID_CLIENT_ID || 'the client id')
+		client_secret: (process.env.OPENID_CLIENT_SECRET || 'some secret')
+		redirect_uris: [process.env.OPENID_REDIRECT_URI || 'https://localhost/redirect']
+
 	clsi:
 		optimiseInDocker: process.env['OPTIMISE_PDF'] == 'true'
 
@@ -224,6 +234,10 @@ settings =
 		trackChanges: true
 		templates: true
 		references: true
+
+	# overleaf: true
+	# enableHomepage: true
+
 
 ## OPTIONAL CONFIGURABLE SETTINGS
 
