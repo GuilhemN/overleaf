@@ -2,7 +2,6 @@
 # Overleaf Base Image (sharelatex/sharelatex-base)
 # --------------------------------------------------
 
-ARG TEX_SCHEME="scheme-basic"
 FROM phusion/baseimage:0.11
 
 ENV baseDir .
@@ -51,6 +50,7 @@ RUN npm install -g \
 #     --build-arg TEXLIVE_MIRROR=http://ctan.crest.fr/tex-archive/systems/texlive/tlnet \
 #     -f Dockerfile-base -t sharelatex/sharelatex-base .
 ARG TEXLIVE_MIRROR=http://mirror.ctan.org/systems/texlive/tlnet
+ARG TEX_SCHEME="scheme-basic"
 
 ENV PATH "${PATH}:/usr/local/texlive/2021/bin/x86_64-linux"
 
@@ -62,7 +62,7 @@ RUN mkdir /install-tl-unx \
 &&  echo "tlpdbopt_autobackup 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_docfiles 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_srcfiles 0" >> /install-tl-unx/texlive.profile \
-&&  echo "selected_scheme $TEX_SCHEME" >> /install-tl-unx/texlive.profile \
+&&  echo "selected_scheme ${TEX_SCHEME}" >> /install-tl-unx/texlive.profile \
     \
 &&  /install-tl-unx/install-tl \
       -profile /install-tl-unx/texlive.profile \
