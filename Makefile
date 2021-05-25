@@ -11,8 +11,4 @@ build-community:
 	docker build --build-arg SHARELATEX_BASE_TAG=$(SHARELATEX_BASE_TAG) -f Dockerfile -t $(SHARELATEX_TAG) .
 
 
-build-dev:
-	docker build -f Dockerfile.dev -t sharelatex-dev .
-
-
 PHONY: build-base build-community

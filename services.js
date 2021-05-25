@@ -2,7 +2,7 @@ module.exports =
 
 [{
 	name: "web",
-	repo: "https://github.com/GuilhemN/web.git",   
+	repo: "https://github.com/GuilhemN/web.git",
 	version: "master"
 }, {
 	name: "real-time",
