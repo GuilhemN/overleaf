@@ -2,9 +2,7 @@ version: '2.2'
 services:
     sharelatex:
 #        restart: always
-        # Server Pro users:
-        # image: quay.io/sharelatex/sharelatex-pro
-        image: sharelatex/sharelatex
+        image: guilhemn/overleaf
         container_name: sharelatex
         depends_on:
             mongo:
@@ -25,8 +23,8 @@ services:
             # - /var/run/docker.sock:/var/run/docker.sock
         environment:
             OPENID_CLIENT_ID: overleaf.aliens-lyon.fr
-            OPENID_CLIENT_SECRET: some secret
-            OPENID_REDIRECT_URI: https://localhost
+            OPENID_CLIENT_SECRET: the client secret
+            OPENID_REDIRECT_URI: http://yourwebsiteurl/redirect
 
 
             SHARELATEX_APP_NAME: Overleaf Community Edition
@@ -77,52 +75,6 @@ services:
             # SHARELATEX_EMAIL_SMTP_LOGGER: true
             # SHARELATEX_CUSTOM_EMAIL_FOOTER: "This system is run by department x"
 
-            ################
-            ## Server Pro ##
-            ################
-
-            # SHARELATEX_IS_SERVER_PRO: 'true'
-
-            # SHARELATEX_SAML_ENTRYPOINT: https://auth.aliens-lyon.fr/auth/realms/master/protocol/saml
-            # SHARELATEX_SAML_CALLBACK_URL: https://auth.aliens-lyon.fr/auth/realms/master/protocol/saml
-            # SHARELATEX_SAML_ISSUER: sharelatex-saml
-            # SHARELATEX_SAML_IDENTITY_SERVICE_NAME: overleaf.aliens-lyon.fr
-            # SHARELATEX_SAML_EMAIL_FIELD: email
-            # # SHARELATEX_SAML_FIRST_NAME_FIELD: f_name
-            # # SHARELATEX_SAML_LAST_NAME_FIELD: l_name
-
-            # SHARELATEX_SAML_CERT: "MIICvTCCAaUCBgF5dKhdsDANBgkqhkiG9w0BAQsFADAiMSAwHgYDVQQDDBdvdmVybGVhZi5hbGllbnMtbHlvbi5mcjAeFw0yMTA1MTYxMDA5MjFaFw0zMTA1MTYxMDExMDFaMCIxIDAeBgNVBAMMF292ZXJsZWFmLmFsaWVucy1seW9uLmZyMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAkBDkrB6PuG9qPC1Rv3yCWQom1DJHawCcI4kQDdoQyWT+Bw70H9gMm5FznGTHsRqCUCd+ygq1JWn7HbIjVuVaVVktUIVig3QB+J6pPF94sDm3vWDVRpR3aRPJTWEMY/W8yp0grqTtqMhHopxi4wtlvvI/RPEi4qz8fmjd8ziCvybqgffQ9vFK2MgrlUiq9/IWvp6vxQRLVrZnXyR9F8DWJRpCUVw8U4zr7WdD5ix3gg5faFANOGGk5KcNOUMRueujhE5NEu+7oSatuEHEKrBwHRGKrrP0ZizR9Y3On1OeCZKJ+cpo6UpIu76n0IL53IxeSZRU1nwYcDm0n2yXaL3vfwIDAQABMA0GCSqGSIb3DQEBCwUAA4IBAQAm6Wftfbn7UGkr6/DYJyjD+E07aUuVRDI8bo+TjOI6o/27Zs/ST2Pmz/yrm+DHbbUOGhEfQm0LhhOGmf5B1ZGq8wGF1F6e7FbjlR4HDwLZhopqwOg86Sk/wBJsJDPg4Ga9cgrtBDjsUYkZyeIQnBKGW+zUG9PQUwYl+qhgnN2vDrKHsfTsLglL4B8baQEZciea+gBbqwbkisc+7kjhPKkL1A3Ci766az+EgBRU+iL0JM650uiTWlSq8u3duOAF5YbBlpg9IWiywehK51R5ogNWEUtR76O8mtp3oObDBotFb1QqmN76DLNZEVXtPXwkBbSabaLrOvvTDI4R8blJtkyq1"
-
-            # SHARELATEX_SAML_DECRYPTION_PVK: |-
-            #     -----BEGIN RSA PRIVATE KEY-----
-            #     MIIEowIBAAKCAQEAkBDkrB6PuG9qPC1Rv3yCWQom1DJHawCcI4kQDdoQyWT+Bw70H9gMm5FznGTHsRqCUCd+ygq1JWn7HbIjVuVaVVktUIVig3QB+J6pPF94sDm3vWDVRpR3aRPJTWEMY/W8yp0grqTtqMhHopxi4wtlvvI/RPEi4qz8fmjd8ziCvybqgffQ9vFK2MgrlUiq9/IWvp6vxQRLVrZnXyR9F8DWJRpCUVw8U4zr7WdD5ix3gg5faFANOGGk5KcNOUMRueujhE5NEu+7oSatuEHEKrBwHRGKrrP0ZizR9Y3On1OeCZKJ+cpo6UpIu76n0IL53IxeSZRU1nwYcDm0n2yXaL3vfwIDAQABAoIBAG3hBJgmYxWXnJ4zLpNu4ngI3x6fDouVFoGf62e1N3JznbBCfn2/KbaJlHTnBMuWXWfHB9QPoKPdllLK6FtBaMmJz58HbOC33T0Dvi423vUBwJsnPOOtHvo8xh9HcszWw1yBxUiOsFk4EDL9NgrXSY3+c7UgeawLpjS/xPDZ3Bbv8NT5Duk7zHoFSO57LVNNLKjtk3rH9Nga2OZ8Ee0til02vc62SG6Fd9J50Bu5d+2TLQHWS5sKo7/mLWzwo9jndkGAKX2knfxtvpWuJnhvmM88670pcBRWALBxHc5eYizPz3ajZfIf+dYD4qEJTiasr5KTPFWn8bjdQ/Llpdj01IECgYEAzrOlz8AY+VkVAhGL6n3fVbDKh8tLy2OW8X08stZfynHcWsAFyQpTpLYAkDwUx23LNPgMOkR8xJFEiPYA85/ivpYUacoo+lFWnW4wYylRLpck9+AFblGZhrpVgvmmbs9ARPFZss0fTq0yrPztX9CUay56M05w1RJ2j8HH6eC1fcECgYEAsmz3MgQPsvJ9dT4qcifmmK9/wupdNdiLL9VfiNtyp+iFRzcYg83SIkEreS8Yi32coYOiDtuLhZrtjfEbxhM3ZaE9/s70eMuy7/hix6SgN1zkSXTO4BEiHjdDD0hCOokA7EJTGHyodGKAHXGAjm+zeTJUSAfTLN5K3E2Tlq5dPT8CgYEAkYo6qPIoY4GO4jr6mmxwkYR+xmilgJspz/WPhJifMAtFzXxBVpH33RTthqFXPCiZmT1CVtCcTUe/yvP0LZYZcHp5+xcGDWKyKv1IAro32CdCN2o8SLYZ9JxE04j24DT7ms+ZieUWMy6ObPFWLk3OAz3hezizB8QNSSF3ory+7cECgYB55H8rqCKheY/D3OhafG/It3xsyHdNJdZQo1BUyraVhwAmGrmgsadwx1zPuSDnirTKkobP56R1bdYENkdnFhGuWG1l+jSBoYdo8SNqiEj8CXXbyPTblljck5w4gIDeRGJhBR6HiAH9IJ2tf7D3nc/aaEuzucTGzkYOIuFE+3GvOQKBgAEDp3Ba3ie0+kgrAlJNqCuU10+ViG9x7Qs37fvB0V4zkgfMU2QXxp3yz2CFcYvC3fEJCVfaf856689MD9QcTsvmU8L08t6S6RK7hDTjROzMILZHgiefYtIs+uWaa82gbPeqXHk9ZQg3fc7S9dSl7d2Su++GrfrJ+HxOwWiYbEUi
-            #     -----END RSA PRIVATE KEY-----
-
-            # SANDBOXED_COMPILES: 'true'
-
-            # SANDBOXED_COMPILES_SIBLING_CONTAINERS: 'true'
-            # SANDBOXED_COMPILES_HOST_DIR: '/var/sharelatex_data/data/compiles'
-            # SYNCTEX_BIN_HOST_PATH: '/var/sharelatex_data/bin/synctex'
-
-            # DOCKER_RUNNER: 'false'
-
-            ## Works with test LDAP server shown at bottom of docker compose
-            # SHARELATEX_LDAP_URL: 'ldap://ldap:389'
-            # SHARELATEX_LDAP_SEARCH_BASE: 'ou=people,dc=planetexpress,dc=com'
-            # SHARELATEX_LDAP_SEARCH_FILTER: '(uid={{username}})'
-            # SHARELATEX_LDAP_BIND_DN: 'cn=admin,dc=planetexpress,dc=com'
-            # SHARELATEX_LDAP_BIND_CREDENTIALS: 'GoodNewsEveryone'
-            # SHARELATEX_LDAP_EMAIL_ATT: 'mail'
-            # SHARELATEX_LDAP_NAME_ATT: 'cn'
-            # SHARELATEX_LDAP_LAST_NAME_ATT: 'sn'
-            # SHARELATEX_LDAP_UPDATE_USER_DETAILS_ON_LOGIN: 'true'
-
-            # SHARELATEX_TEMPLATES_USER_ID: "578773160210479700917ee5"
-            # SHARELATEX_NEW_PROJECT_TEMPLATE_LINKS: '[ {"name":"All Templates","url":"/templates/all"}]'
-
-
-            # SHARELATEX_PROXY_LEARN: "true"
-
     mongo:
         restart: always
         image: mongo:4.0
@@ -145,13 +97,6 @@ services:
             - 6379
         volumes:
             - ~/redis_data:/data
-
-    # ldap:
-    #    restart: always
-    #    image: rroemhild/test-openldap
-    #    container_name: ldap
-    #    expose:
-    #        - 389
 
     # See https://github.com/jwilder/nginx-proxy for documentation on how to configure the nginx-proxy container,
     # and https://github.com/overleaf/overleaf/wiki/HTTPS-reverse-proxy-using-Nginx for an example of some recommended

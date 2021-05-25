@@ -1,9 +1,13 @@
 # --------------------------------------------------
 # Overleaf Base Image (sharelatex/sharelatex-base)
 # --------------------------------------------------
+ARG TEX_SCHEME="scheme-full"
 
 FROM phusion/baseimage:0.11
 
+ARG TEX_SCHEME
+
+RUN echo "${TEX_SCHEME}"
 ENV baseDir .
 
 
@@ -50,7 +54,6 @@ RUN npm install -g \
 #     --build-arg TEXLIVE_MIRROR=http://ctan.crest.fr/tex-archive/systems/texlive/tlnet \
 #     -f Dockerfile-base -t sharelatex/sharelatex-base .
 ARG TEXLIVE_MIRROR=http://mirror.ctan.org/systems/texlive/tlnet
-ARG TEX_SCHEME="scheme-basic"
 
 ENV PATH "${PATH}:/usr/local/texlive/2021/bin/x86_64-linux"
 

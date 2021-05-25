@@ -4,7 +4,7 @@ SHARELATEX_BASE_TAG := sharelatex/sharelatex-base
 SHARELATEX_TAG := sharelatex/sharelatex
 
 build-base:
-	docker build -f Dockerfile-base -t  $(SHARELATEX_BASE_TAG) .
+	docker build --build-arg TEX_SCHEME="scheme-basic" -f Dockerfile-base -t  $(SHARELATEX_BASE_TAG) .
 
 
 build-community:
