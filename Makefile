@@ -1,7 +1,7 @@
 # Makefile
 
-SHARELATEX_BASE_TAG := sharelatex/sharelatex-base
-SHARELATEX_TAG := sharelatex/sharelatex
+SHARELATEX_BASE_TAG := guilhemn/overleaf-base-full:latest
+SHARELATEX_TAG := guilhemn/overleaf
 
 build-base:
 	docker build --build-arg TEX_SCHEME="scheme-basic" -f Dockerfile-base -t  $(SHARELATEX_BASE_TAG) .
