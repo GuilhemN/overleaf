@@ -64,6 +64,9 @@ const _ = require('underscore')
 const { expressify } = require('./util/promises')
 const { plainTextResponse } = require('./infrastructure/Response')
 
+const bodyParser = require('body-parser');
+const passport = require('passport');
+
 module.exports = { initialize }
 
 function initialize(webRouter, privateApiRouter, publicApiRouter) {
@@ -94,8 +97,38 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     CaptchaMiddleware.canSkipCaptcha
   )
 
-  webRouter.get('/login', UserPagesController.loginPage)
+  webRouter.get('/login',
+    passport.authenticate('oidc', { failureRedirect: '/', failureFlash: true }),
+    function (req, res) {
+      res.redirect('/');
+    }
+  );
   AuthenticationController.addEndpointToLoginWhitelist('/login')
+
+  // authentication callback -  this is called successfully
+  webRouter.get('/redirect', (req, res, next) => {
+    passport.authenticate('oidc', (err, user, info) => {
+      console.log(`got the user ${user.email}`);
+      if (err) {
+        console.log(`error occurred ${err}`);
+      }
+
+      if (err) {
+        return next(err)
+      }
+      if (user) {
+        // `user` is either a user object or false
+        return AuthenticationController.finishLogin(user, req, res, next)
+      } else {
+        if (info.redir != null) {
+          return res.json({ redir: info.redir })
+        } else {
+          return res.json({ message: info })
+        }
+      }
+    })(req, res, next);
+  });
+  AuthenticationController.addEndpointToLoginWhitelist('/redirect')
 
   webRouter.post(
     '/login',

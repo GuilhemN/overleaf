@@ -75,6 +75,64 @@ const AuthenticationManager = {
     })
   },
 
+  doPassportLogin(claims, callback) {
+    query = {
+      thirdPartyIdentifiers: claims.sub
+    }
+
+    // Using Mongoose for legacy reasons here. The returned User instance
+    // gets serialized into the session and there may be subtle differences
+    // between the user returned by Mongoose vs mongojs (such as default values)
+    User.findOne(query, (error, user) => {
+      if (error) {
+        return callback(error)
+      }
+
+      AuthenticationManager.createIfNotExistAndLogin(user, claims, query, callback)
+    })
+  },
+
+  createIfNotExistAndLogin(user, claims, query, callback) {
+    if (!user || !user.hashedPassword) {
+      //create random pass for local userdb, does not get checked for ldap users during login
+      let pass = require("crypto").randomBytes(32).toString("hex")
+      const userRegHand = require('../User/UserRegistrationHandler.js')
+      userRegHand.registerNewUser({
+        email: claims.email,
+        first_name: claims.given_name,
+        last_name: claims.family_name,
+        password: pass
+      },
+        function (error, user) {
+          if (error) {
+            return callback(error)
+          }
+          user.admin = false
+          user.emails[0].confirmedAt = Date.now()
+          user.thirdPartyIdentifiers.push(claims.sub)
+          user.save(function (err, result) {
+            if (err) {
+              return callback(err);
+            }
+
+            console.log("user %s added to local library", user.email)
+            callback(null, result);
+          })
+        })
+    } else {
+      user.email = claims.email;
+      user.first_name = claims.given_name;
+      user.last_name = claims.family_name;
+      user.save(function (err, result) {
+        if (err) {
+          return callback(err);
+        }
+
+        callback(null, result);
+      });
+    }
+  },
+
   validateEmail(email) {
     const parsed = EmailHelper.parseEmail(email)
     if (!parsed) {

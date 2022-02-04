@@ -24,7 +24,7 @@ const cookieParser = require('cookie-parser')
 const bearerToken = require('express-bearer-token')
 
 const passport = require('passport')
-const LocalStrategy = require('passport-local').Strategy
+const { Issuer, Strategy } = require('openid-client');
 
 const oneDayInMilliseconds = 86400000
 const ReferalConnect = require('../Features/Referal/ReferalConnect')
@@ -40,6 +40,7 @@ const HttpErrorHandler = require('../Features/Errors/HttpErrorHandler')
 const UserSessionsManager = require('../Features/User/UserSessionsManager')
 const AuthenticationController = require('../Features/Authentication/AuthenticationController')
 const SessionManager = require('../Features/Authentication/SessionManager')
+const AuthenticationManager = require('../Features/Authentication/AuthenticationManager')
 
 const STATIC_CACHE_AGE = Settings.cacheStaticAssets
   ? oneDayInMilliseconds * 365
@@ -173,16 +174,27 @@ webRouter.use(SessionStoreManager.validationMiddleware)
 webRouter.use(passport.initialize())
 webRouter.use(passport.session())
 
-passport.use(
-  new LocalStrategy(
-    {
-      passReqToCallback: true,
-      usernameField: 'email',
-      passwordField: 'password',
-    },
-    AuthenticationController.doPassportLogin
-  )
-)
+const issuer = new Issuer({
+  issuer: Settings.OpenID.issuer,
+  authorization_endpoint: Settings.OpenID.authorization_endpoint,
+  token_endpoint: Settings.OpenID.token_endpoint,
+  jwks_uri: Settings.OpenID.jwks_uri,
+});
+
+const client = new issuer.Client({
+  client_id: Settings.OpenID.client_id,
+  client_secret: Settings.OpenID.client_secret,
+  redirect_uris: Settings.OpenID.redirect_uris,
+});
+
+passport.use('oidc', new Strategy(
+  { client: client },
+  (tokenSet, done) => {
+    const claims = tokenSet.claims();
+    console.log('claims was provided successfully!', claims);
+    AuthenticationManager.doPassportLogin(claims, done);
+  })
+);
 passport.serializeUser(AuthenticationController.serializeUser)
 passport.deserializeUser(AuthenticationController.deserializeUser)
 
