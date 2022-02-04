@@ -1,3 +1,14 @@
+# OpenID Overleaf
+
+This repository creates a docker image based on a fork of overleaf.
+
+It adds support for an OpenID based authentication, which can be used for instance with KeyCloak.
+
+# Usage
+
+To use this repository, use the docker-compose.yml file from this repository, and adapt the environment variables to your needs.
+
+
 <h1 align="center">
   <br>
   <a href="https://www.overleaf.com"><img src="doc/logo.png" alt="Overleaf" width="300"></a>

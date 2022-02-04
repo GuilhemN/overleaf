@@ -2,7 +2,11 @@
 # Overleaf Base Image (sharelatex/sharelatex-base)
 # --------------------------------------------------
 
+ARG TEX_SCHEME="scheme-full"
+
 FROM phusion/baseimage:focal-1.0.0
+
+ARG TEX_SCHEME
 
 # Makes sure LuaTex cache is writable
 # -----------------------------------
@@ -52,7 +56,7 @@ RUN mkdir /install-tl-unx \
 &&  echo "tlpdbopt_autobackup 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_docfiles 0" >> /install-tl-unx/texlive.profile \
 &&  echo "tlpdbopt_install_srcfiles 0" >> /install-tl-unx/texlive.profile \
-&&  echo "selected_scheme scheme-basic" >> /install-tl-unx/texlive.profile \
+&&  echo "selected_scheme ${TEX_SCHEME}" >> /install-tl-unx/texlive.profile \
     \
 &&  /install-tl-unx/install-tl \
       -profile /install-tl-unx/texlive.profile \

@@ -4,7 +4,7 @@ services:
         restart: always
         # Server Pro users:
         # image: quay.io/sharelatex/sharelatex-pro
-        image: sharelatex/sharelatex
+        image: guilhemn/overleaf
         container_name: sharelatex
         depends_on:
             mongo:
@@ -24,6 +24,9 @@ services:
             ########################################################################
             # - /var/run/docker.sock:/var/run/docker.sock
         environment:
+            OPENID_CLIENT_ID: overleaf.aliens-lyon.fr
+            OPENID_CLIENT_SECRET: the client secret
+            OPENID_REDIRECT_URI: http://yourwebsiteurl/redirect
 
             SHARELATEX_APP_NAME: Overleaf Community Edition
 
