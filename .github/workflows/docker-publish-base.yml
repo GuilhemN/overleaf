@@ -10,7 +10,7 @@ on:
 
 jobs:
   docker:
-    runs-on: overleaf-runner
+    runs-on: self-hosted
     steps:
       -
         name: Checkout 
