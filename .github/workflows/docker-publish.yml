@@ -1,4 +1,4 @@
-name: Build and Publish Docker Base 
+name: Build and Publish Docker 
 
 # This workflow uses actions that are not certified by GitHub.
 # They are provided by a third-party and are governed by
@@ -29,6 +29,6 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: .
-          file: ./server-ce/Dockerfile-base
+          file: ./server-ce/Dockerfile
           push: true
-          tags: guilhemn/overleaf-base-full:latest
+          tags: guilhemn/overleaf:latest
