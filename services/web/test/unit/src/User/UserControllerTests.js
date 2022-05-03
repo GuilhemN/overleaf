@@ -42,8 +42,10 @@ describe('UserController', function () {
       promises: { getUser: sinon.stub().resolves(this.user) },
     }
     this.User = { findById: sinon.stub().callsArgWith(1, null, this.user) }
-    this.NewsLetterManager = { unsubscribe: sinon.stub().callsArgWith(1) }
-    this.UserRegistrationHandler = { registerNewUser: sinon.stub() }
+    this.NewsLetterManager = {
+      subscribe: sinon.stub().yields(),
+      unsubscribe: sinon.stub().yields(),
+    }
     this.AuthenticationController = {
       establishUserSession: sinon.stub().callsArg(2),
     }
@@ -104,7 +106,6 @@ describe('UserController', function () {
           User: this.User,
         },
         '../Newsletter/NewsletterManager': this.NewsLetterManager,
-        './UserRegistrationHandler': this.UserRegistrationHandler,
         '../Authentication/AuthenticationController':
           this.AuthenticationController,
         '../Authentication/SessionManager': this.SessionManager,
@@ -290,9 +291,23 @@ describe('UserController', function () {
     })
   })
 
+  describe('subscribe', function () {
+    it('should send the user to subscribe', function (done) {
+      this.res.json = data => {
+        expect(data.message).to.equal('thanks_settings_updated')
+        this.NewsLetterManager.subscribe
+          .calledWith(this.user)
+          .should.equal(true)
+        done()
+      }
+      this.UserController.subscribe(this.req, this.res)
+    })
+  })
+
   describe('unsubscribe', function () {
     it('should send the user to unsubscribe', function (done) {
-      this.res.sendStatus = () => {
+      this.res.json = data => {
+        expect(data.message).to.equal('thanks_settings_updated')
         this.NewsLetterManager.unsubscribe
           .calledWith(this.user)
           .should.equal(true)
@@ -558,32 +573,6 @@ describe('UserController', function () {
     })
   })
 
-  describe('register', function () {
-    beforeEach(function () {
-      this.UserRegistrationHandler.registerNewUserAndSendActivationEmail = sinon
-        .stub()
-        .callsArgWith(1, null, this.user, (this.url = 'mock/url'))
-      this.req.body.email = this.user.email = this.email = 'email@example.com'
-      this.UserController.register(this.req, this.res)
-    })
-
-    it('should register the user and send them an email', function () {
-      sinon.assert.calledWith(
-        this.UserRegistrationHandler.registerNewUserAndSendActivationEmail,
-        this.email
-      )
-    })
-
-    it('should return the user and activation url', function () {
-      this.res.json
-        .calledWith({
-          email: this.email,
-          setNewPasswordUrl: this.url,
-        })
-        .should.equal(true)
-    })
-  })
-
   describe('clearSessions', function () {
     describe('success', function () {
       it('should call revokeAllUserSessions', function (done) {
@@ -742,7 +731,7 @@ describe('UserController', function () {
           expect(this.HttpErrorHandler.badRequest).to.have.been.calledWith(
             this.req,
             this.res,
-            'Your old password is wrong'
+            'password_change_old_password_wrong'
           )
           this.AuthenticationManager.promises.authenticate.should.have.been.calledWith(
             { _id: this.user._id },

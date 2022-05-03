@@ -1,3 +1,4 @@
+import { waitFor } from '@testing-library/react'
 import { act } from '@testing-library/react-hooks'
 import { expect } from 'chai'
 import sinon from 'sinon'
@@ -46,6 +47,7 @@ describe('useDetachLayout', function () {
   })
 
   it('detacher role', async function () {
+    sysendTestHelper.spy.broadcast.resetHistory()
     window.metaAttributesCache.set('ol-detachRole', 'detacher')
 
     // 1. create hook in detacher mode
@@ -55,6 +57,8 @@ describe('useDetachLayout', function () {
     expect(result.current.isLinked).to.be.false
     expect(result.current.isLinking).to.be.false
     expect(result.current.role).to.equal('detacher')
+    const broadcastMessagesCount =
+      sysendTestHelper.getAllBroacastMessages().length
 
     // 2. simulate connected detached tab
     sysendTestHelper.spy.broadcast.resetHistory()
@@ -70,6 +74,13 @@ describe('useDetachLayout', function () {
     expect(result.current.isLinking).to.be.false
     expect(result.current.role).to.equal('detacher')
 
+    // check that all message were re-broadcast for the new tab
+    await nextTick() // necessary to ensure all event handler have run
+    await waitFor(() => {
+      const reBroadcastMessagesCount =
+        sysendTestHelper.getAllBroacastMessages().length
+      expect(reBroadcastMessagesCount).to.equal(broadcastMessagesCount)
+    })
     // 3. simulate closed detached tab
     sysendTestHelper.spy.broadcast.resetHistory()
     sysendTestHelper.receiveMessage({
@@ -90,21 +101,7 @@ describe('useDetachLayout', function () {
     expect(result.current.isLinking).to.be.false
     expect(result.current.role).to.equal('detacher')
 
-    // 5. simulate closed detacher tab
-    sysendTestHelper.spy.broadcast.resetHistory()
-    sysendTestHelper.receiveMessage({
-      role: 'detacher',
-      event: 'closed',
-    })
-    expect(result.current.isLinked).to.be.true
-    expect(result.current.isLinking).to.be.false
-    expect(result.current.role).to.equal('detacher')
-    expect(sysendTestHelper.getLastBroacastMessage()).to.deep.equal({
-      role: 'detacher',
-      event: 'up',
-    })
-
-    // 6. reattach
+    // 5. reattach
     sysendTestHelper.spy.broadcast.resetHistory()
     act(() => {
       result.current.reattach()
@@ -116,6 +113,26 @@ describe('useDetachLayout', function () {
       role: 'detacher',
       event: 'reattach',
     })
+  })
+
+  it('reset detacher role when other detacher tab connects', function () {
+    window.metaAttributesCache.set('ol-detachRole', 'detacher')
+
+    // 1. create hook in detacher mode
+    const { result } = renderHookWithEditorContext(() => useDetachLayout())
+    expect(result.current.reattach).to.be.a('function')
+    expect(result.current.detach).to.be.a('function')
+    expect(result.current.isLinked).to.be.false
+    expect(result.current.isLinking).to.be.false
+    expect(result.current.role).to.equal('detacher')
+
+    // 2. simulate other detacher tab
+    sysendTestHelper.receiveMessage({
+      role: 'detacher',
+      event: 'up',
+    })
+    expect(result.current.isRedundant).to.be.true
+    expect(result.current.role).to.equal(null)
   })
 
   it('detached role', async function () {
@@ -185,3 +202,9 @@ describe('useDetachLayout', function () {
     sinon.assert.called(closeStub)
   })
 })
+
+const nextTick = () => {
+  return new Promise(resolve => {
+    setTimeout(resolve)
+  })
+}

@@ -11,12 +11,18 @@ WORKDIR /overleaf
 # -------------------------
 ADD server-ce/genScript.js /overleaf/genScript.js
 ADD server-ce/services.js /overleaf/services.js
+ADD package.json package-lock.json /overleaf/
+ADD libraries/ /overleaf/libraries/
 ADD services/ /overleaf/services/
 
 # Store the revision
 # ------------------
 ARG MONOREPO_REVISION
 RUN echo "monorepo-server-ce,$MONOREPO_REVISION" > /var/www/revisions.txt
+
+# Upgrade npm for workspaces support
+# ----------------------------------
+RUN npm install -g npm@7.24.2
 
 # Install npm dependencies
 # ------------------------
@@ -61,6 +67,7 @@ RUN chmod +x /usr/local/bin/grunt
 ENV SHARELATEX_CONFIG /etc/sharelatex/settings.js
 
 ENV WEB_API_USER "sharelatex"
+ENV ADMIN_PRIVILEGE_AVAILABLE "true"
 
 ENV SHARELATEX_APP_NAME "Overleaf Community Edition"
 
@@ -72,7 +79,4 @@ ENV LOG_LEVEL "info"
 
 EXPOSE 80
 
-WORKDIR /
-
 ENTRYPOINT ["/sbin/my_init"]
-

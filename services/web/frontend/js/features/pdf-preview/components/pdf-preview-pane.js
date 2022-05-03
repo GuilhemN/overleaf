@@ -1,18 +1,19 @@
 import { memo, Suspense } from 'react'
+import classNames from 'classnames'
 import PdfLogsViewer from './pdf-logs-viewer'
 import PdfViewer from './pdf-viewer'
 import LoadingSpinner from '../../../shared/components/loading-spinner'
 import PdfHybridPreviewToolbar from './pdf-preview-hybrid-toolbar'
-import PdfPreviewToolbar from './pdf-preview-toolbar'
-
-const newPreviewToolbar = new URLSearchParams(window.location.search).has(
-  'new_preview_toolbar'
-)
+import { useDetachCompileContext as useCompileContext } from '../../../shared/context/detach-compile-context'
 
 function PdfPreviewPane() {
+  const { pdfUrl } = useCompileContext()
+  const classes = classNames('pdf', 'full-size', {
+    'pdf-empty': !pdfUrl,
+  })
   return (
-    <div className="pdf full-size">
-      {newPreviewToolbar ? <PdfPreviewToolbar /> : <PdfHybridPreviewToolbar />}
+    <div className={classes}>
+      <PdfHybridPreviewToolbar />
       <Suspense fallback={<LoadingPreview />}>
         <div className="pdf-viewer">
           <PdfViewer />
@@ -26,7 +27,7 @@ function PdfPreviewPane() {
 function LoadingPreview() {
   return (
     <div className="pdf-loading-spinner-container">
-      <LoadingSpinner />
+      <LoadingSpinner delay={500} />
     </div>
   )
 }

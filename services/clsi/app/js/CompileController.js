@@ -17,7 +17,7 @@ const CompileManager = require('./CompileManager')
 const Settings = require('@overleaf/settings')
 const Metrics = require('./Metrics')
 const ProjectPersistenceManager = require('./ProjectPersistenceManager')
-const logger = require('logger-sharelatex')
+const logger = require('@overleaf/logger')
 const Errors = require('./Errors')
 
 function isImageNameAllowed(imageName) {
@@ -27,6 +27,8 @@ function isImageNameAllowed(imageName) {
 }
 
 module.exports = CompileController = {
+  lastSuccessfulCompile: 0,
+
   compile(req, res, next) {
     if (next == null) {
       next = function () {}
@@ -36,6 +38,7 @@ module.exports = CompileController = {
       if (error != null) {
         return next(error)
       }
+      timer.opts = request.metricsOpts
       request.project_id = req.params.project_id
       if (req.params.user_id != null) {
         request.user_id = req.params.user_id
@@ -86,6 +89,7 @@ module.exports = CompileController = {
                 for (file of Array.from(outputFiles)) {
                   if (file.path === 'output.pdf' && file.size > 0) {
                     status = 'success'
+                    CompileController.lastSuccessfulCompile = Date.now()
                   }
                 }
 

@@ -16,7 +16,7 @@ const async = require('async')
 const fs = require('fs')
 const fse = require('fs-extra')
 const Path = require('path')
-const logger = require('logger-sharelatex')
+const logger = require('@overleaf/logger')
 const _ = require('lodash')
 const Settings = require('@overleaf/settings')
 const crypto = require('crypto')
@@ -186,7 +186,7 @@ module.exports = OutputCacheManager = {
               }
 
               OutputCacheManager.saveStreamsInContentDir(
-                { stats, timings },
+                { request, stats, timings },
                 result,
                 compileDir,
                 outputDir,
@@ -348,7 +348,7 @@ module.exports = OutputCacheManager = {
   },
 
   saveStreamsInContentDir(
-    { stats, timings },
+    { request, stats, timings },
     outputFiles,
     compileDir,
     outputDir,
@@ -367,7 +367,11 @@ module.exports = OutputCacheManager = {
           OutputCacheManager.path(outputFile.build, outputFile.path)
         )
         const pdfSize = outputFile.size
-        const timer = new Metrics.Timer('compute-pdf-ranges')
+        const timer = new Metrics.Timer(
+          'compute-pdf-ranges',
+          1,
+          request.metricsOpts
+        )
         ContentCacheManager.update(
           contentDir,
           outputFilePath,

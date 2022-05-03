@@ -7,6 +7,19 @@ const AuthenticationController = require('../Authentication/AuthenticationContro
 const SessionManager = require('../Authentication/SessionManager')
 const TokenAccessHandler = require('../TokenAccess/TokenAccessHandler')
 const { expressify } = require('../../util/promises')
+const {
+  canRedirectToAdminDomain,
+} = require('../Helpers/AdminAuthorizationHelper')
+const { getSafeAdminDomainRedirect } = require('../Helpers/UrlHelper')
+
+function handleAdminDomainRedirect(req, res) {
+  if (canRedirectToAdminDomain(SessionManager.getSessionUser(req.session))) {
+    logger.warn({ req }, 'redirecting admin user to admin domain')
+    res.redirect(getSafeAdminDomainRedirect(req.originalUrl))
+    return true
+  }
+  return false
+}
 
 async function ensureUserCanReadMultipleProjects(req, res, next) {
   const projectIds = (req.query.project_ids || '').split(',')
@@ -133,11 +146,11 @@ async function ensureUserCanAdminProject(req, res, next) {
 
 async function ensureUserIsSiteAdmin(req, res, next) {
   const userId = _getUserId(req)
-  const isAdmin = await AuthorizationManager.promises.isUserSiteAdmin(userId)
-  if (isAdmin) {
+  if (await AuthorizationManager.promises.isUserSiteAdmin(userId)) {
     logger.log({ userId }, 'allowing user admin access to site')
     return next()
   }
+  if (handleAdminDomainRedirect(req, res)) return
   logger.log({ userId }, 'denying user admin access to site')
   _redirectToRestricted(req, res, next)
 }
@@ -192,5 +205,6 @@ module.exports = {
   ),
   ensureUserCanAdminProject: expressify(ensureUserCanAdminProject),
   ensureUserIsSiteAdmin: expressify(ensureUserIsSiteAdmin),
+  handleAdminDomainRedirect,
   restricted,
 }

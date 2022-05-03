@@ -5,9 +5,6 @@ module.exports = {
 }
 
 function hasAnyStaffAccess(user) {
-  if (user.isAdmin) {
-    return true
-  }
   if (!user.staffAccess) {
     return false
   }

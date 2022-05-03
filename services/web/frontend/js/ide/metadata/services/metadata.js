@@ -35,12 +35,6 @@ export default App.factory('metadata', function ($http, ide) {
     }
   }
 
-  metadata.onFileUploadComplete = function (e, upload) {
-    if (upload.entity_type === 'doc') {
-      return metadata.loadDocMetaFromServer(upload.entity_id)
-    }
-  }
-
   metadata.getAllLabels = () =>
     _.flattenDeep(
       (() => {
@@ -119,6 +113,10 @@ export default App.factory('metadata', function ($http, ide) {
       return delete debouncer[docId]
     }, 1000))
   }
+
+  window.addEventListener('editor:metadata-outdated', () => {
+    metadata.scheduleLoadDocMetaFromServer(ide.$scope.editor.sharejs_doc.doc_id)
+  })
 
   return metadata
 })

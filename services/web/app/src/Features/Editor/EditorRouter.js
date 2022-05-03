@@ -2,10 +2,9 @@ const EditorHttpController = require('./EditorHttpController')
 const AuthenticationController = require('../Authentication/AuthenticationController')
 const AuthorizationMiddleware = require('../Authorization/AuthorizationMiddleware')
 const RateLimiterMiddleware = require('../Security/RateLimiterMiddleware')
-const { Joi, validate } = require('../../infrastructure/Validation')
 
 module.exports = {
-  apply(webRouter, apiRouter) {
+  apply(webRouter, privateApiRouter) {
     webRouter.post(
       '/project/:Project_id/doc',
       AuthorizationMiddleware.ensureUserCanWriteProjectContent,
@@ -55,21 +54,11 @@ module.exports = {
       AuthorizationMiddleware.ensureUserCanWriteProjectContent,
       EditorHttpController.deleteFolder
     )
-    apiRouter.post(
-      '/project/:Project_id/doc/:entity_id/convert-to-file',
-      AuthenticationController.requirePrivateApiAuth(),
-      validate({
-        body: Joi.object({
-          userId: Joi.objectId().required(),
-        }),
-      }),
-      EditorHttpController.convertDocToFile
-    )
 
     // Called by the real-time API to load up the current project state.
     // This is a post request because it's more than just a getting of data. We take actions
     // whenever a user joins a project, like updating the deleted status.
-    apiRouter.post(
+    privateApiRouter.post(
       '/project/:Project_id/join',
       AuthenticationController.requirePrivateApiAuth(),
       RateLimiterMiddleware.rateLimit({

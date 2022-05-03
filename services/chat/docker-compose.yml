@@ -6,9 +6,11 @@ version: "2.3"
 
 services:
   test_unit:
-    image: node:14.18.3
+    image: node:16.14.2
     volumes:
       - .:/overleaf/services/chat
+      - ../../node_modules:/overleaf/node_modules
+      - ../../libraries:/overleaf/libraries
     working_dir: /overleaf/services/chat
     environment:
       MOCHA_GREP: ${MOCHA_GREP}
@@ -18,14 +20,17 @@ services:
     user: node
 
   test_acceptance:
-    image: node:14.18.3
+    image: node:16.14.2
     volumes:
       - .:/overleaf/services/chat
+      - ../../node_modules:/overleaf/node_modules
+      - ../../libraries:/overleaf/libraries
     working_dir: /overleaf/services/chat
     environment:
       ELASTIC_SEARCH_DSN: es:9200
       REDIS_HOST: redis
       QUEUES_REDIS_HOST: redis
+      ANALYTICS_QUEUES_REDIS_HOST: redis
       MONGO_HOST: mongo
       POSTGRES_HOST: postgres
       MOCHA_GREP: ${MOCHA_GREP}

@@ -55,7 +55,12 @@ describe('ProjectController', function () {
         .callsArgWith(2, null, { _id: this.project_id }),
     }
     this.SubscriptionLocator = { getUsersSubscription: sinon.stub() }
-    this.LimitationsManager = { hasPaidSubscription: sinon.stub() }
+    this.LimitationsManager = {
+      hasPaidSubscription: sinon.stub(),
+      userIsMemberOfGroupSubscription: sinon
+        .stub()
+        .callsArgWith(1, null, false),
+    }
     this.TagsHandler = { getAllTags: sinon.stub() }
     this.NotificationsHandler = { getUserNotifications: sinon.stub() }
     this.UserModel = { findById: sinon.stub(), updateOne: sinon.stub() }
@@ -123,18 +128,14 @@ describe('ProjectController', function () {
       },
       inc: sinon.stub(),
     }
-    this.NewLogsUIHelper = {
-      getNewLogsUIVariantForUser: sinon
-        .stub()
-        .returns({ newLogsUI: false, subvariant: null }),
-    }
     this.SplitTestHandler = {
       promises: {
         getAssignment: sinon.stub().resolves({ variant: 'default' }),
-        assignInLocalsContext: sinon.stub().resolves({ variant: 'default' }),
       },
       getAssignment: sinon.stub().yields(null, { variant: 'default' }),
-      assignInLocalsContext: sinon.stub().yields(null, { variant: 'default' }),
+    }
+    this.InstitutionsFeatures = {
+      hasLicence: sinon.stub().callsArgWith(1, null, false),
     }
 
     this.ProjectController = SandboxedModule.require(MODULE_PATH, {
@@ -175,10 +176,10 @@ describe('ProjectController', function () {
         '../../infrastructure/Modules': {
           hooks: { fire: sinon.stub().yields(null, []) },
         },
-        '../Helpers/NewLogsUI': this.NewLogsUIHelper,
         '../Spelling/SpellingHandler': {
           getUserDictionary: sinon.stub().yields(null, []),
         },
+        '../Institutions/InstitutionsFeatures': this.InstitutionsFeatures,
       },
     })
 
@@ -551,6 +552,57 @@ describe('ProjectController', function () {
           done()
         }
         this.ProjectController.projectListPage(this.req, this.res)
+      })
+    })
+
+    describe('persistent upgrade prompt', function () {
+      describe('if the user has the default variant', function (done) {
+        it('should not show', function (done) {
+          this.res.render = (pageName, opts) => {
+            expect(opts.showToolbarUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.projectListPage(this.req, this.res)
+        })
+      })
+
+      describe('if the user has the persistent-upgrade variant', function (done) {
+        beforeEach(function () {
+          this.SplitTestHandler.getAssignment
+            .withArgs(this.req, this.res, 'persistent-upgrade-prompt')
+            .yields(null, { variant: 'persistent-upgrade' })
+        })
+        it('should show for a user without a subscription or only non-paid affiliations', function (done) {
+          this.res.render = (pageName, opts) => {
+            expect(opts.showToolbarUpgradePrompt).to.equal(true)
+            done()
+          }
+          this.ProjectController.projectListPage(this.req, this.res)
+        })
+        it('should not show for a user with a subscription', function (done) {
+          this.LimitationsManager.hasPaidSubscription = sinon
+            .stub()
+            .callsArgWith(1, null, true)
+          this.res.render = (pageName, opts) => {
+            expect(opts.showToolbarUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.projectListPage(this.req, this.res)
+        })
+        it('should not show for a user with an affiliated paid university', function (done) {
+          const emailWithProAffiliation = {
+            email: 'pro@example.com',
+            emailHasInstitutionLicence: true,
+          }
+          this.UserGetter.getUserFullEmails = sinon
+            .stub()
+            .yields(null, [emailWithProAffiliation])
+          this.res.render = (pageName, opts) => {
+            expect(opts.showToolbarUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.projectListPage(this.req, this.res)
+        })
       })
     })
 
@@ -1403,40 +1455,6 @@ describe('ProjectController', function () {
     })
 
     describe('feature flags', function () {
-      describe('showNewPdfPreview', function () {
-        it('should be false by default', function (done) {
-          this.res.render = (pageName, opts) => {
-            expect(opts.showNewPdfPreview).to.be.false
-            done()
-          }
-          this.ProjectController.loadEditor(this.req, this.res)
-        })
-        it('should be true when ?new_pdf_preview=true ', function (done) {
-          this.res.render = (pageName, opts) => {
-            expect(opts.showNewPdfPreview).to.be.true
-            done()
-          }
-          this.req.query.new_pdf_preview = 'true'
-          this.ProjectController.loadEditor(this.req, this.res)
-        })
-        it('should be true for alpha group', function (done) {
-          this.res.render = (pageName, opts) => {
-            expect(opts.showNewPdfPreview).to.be.true
-            done()
-          }
-          this.user.alphaProgram = true
-          this.ProjectController.loadEditor(this.req, this.res)
-        })
-        it('should be false when when ?new_pdf_preview=true and alpha group', function (done) {
-          this.res.render = (pageName, opts) => {
-            expect(opts.showNewPdfPreview).to.be.true
-            done()
-          }
-          this.user.alphaProgram = true
-          this.req.query.new_pdf_preview = 'false'
-          this.ProjectController.loadEditor(this.req, this.res)
-        })
-      })
       describe('showPdfDetach', function () {
         describe('showPdfDetach=false', function () {
           it('should be false by default', function (done) {
@@ -1446,44 +1464,103 @@ describe('ProjectController', function () {
             }
             this.ProjectController.loadEditor(this.req, this.res)
           })
-          it('should be false by default, even when ?new_pdf_preview=true', function (done) {
+
+          it('should be false when the split test is enabled and ?pdf_detach=false', function (done) {
             this.res.render = (pageName, opts) => {
               expect(opts.showPdfDetach).to.be.false
-              expect(opts.showNewPdfPreview).to.be.true
               done()
             }
-            this.req.query.new_pdf_preview = 'true'
-            this.ProjectController.loadEditor(this.req, this.res)
-          })
-          it('should be false when when ?pdf_detach=true and alpha group', function (done) {
-            this.res.render = (pageName, opts) => {
-              done()
-            }
-            this.user.alphaProgram = true
+            this.SplitTestHandler.getAssignment
+              .withArgs(this.req, this.res, 'pdf-detach')
+              .yields(null, { variant: 'enabled' })
             this.req.query.pdf_detach = 'false'
             this.ProjectController.loadEditor(this.req, this.res)
           })
         })
 
         describe('showPdfDetach=true', function () {
-          it('should be true when ?pdf_detach=true, and set showNewPdfPreview as true ', function (done) {
+          it('should be true when ?pdf_detach=true', function (done) {
             this.res.render = (pageName, opts) => {
               expect(opts.showPdfDetach).to.be.true
-              expect(opts.showNewPdfPreview).to.be.true
               done()
             }
             this.req.query.pdf_detach = 'true'
             this.ProjectController.loadEditor(this.req, this.res)
           })
-          it('should be true for alpha group, and set showNewPdfPreview as true', function (done) {
+
+          it('should be true for alpha group', function (done) {
             this.res.render = (pageName, opts) => {
               expect(opts.showPdfDetach).to.be.true
-              expect(opts.showNewPdfPreview).to.be.true
               done()
             }
-            this.user.alphaProgram = true
+            this.SplitTestHandler.getAssignment
+              .withArgs(this.req, this.res, 'pdf-detach')
+              .yields(null, { variant: 'enabled' })
             this.ProjectController.loadEditor(this.req, this.res)
           })
+        })
+      })
+    })
+
+    describe('persistent upgrade prompt', function () {
+      beforeEach(function () {
+        // default to without a subscription
+        this.SubscriptionLocator.getUsersSubscription = sinon
+          .stub()
+          .callsArgWith(1, null, null)
+      })
+      describe('if the user has the default variant', function (done) {
+        it('should not show', function (done) {
+          this.res.render = (pageName, opts) => {
+            expect(opts.showHeaderUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.loadEditor(this.req, this.res)
+        })
+      })
+
+      describe('if the user has the persistent-upgrade variant', function (done) {
+        beforeEach(function () {
+          this.SplitTestHandler.getAssignment
+            .withArgs(this.req, this.res, 'persistent-upgrade-prompt')
+            .yields(null, { variant: 'persistent-upgrade' })
+        })
+        it('should show for a user without a subscription or only non-paid affiliations', function (done) {
+          this.res.render = (pageName, opts) => {
+            expect(opts.showHeaderUpgradePrompt).to.equal(true)
+            done()
+          }
+          this.ProjectController.loadEditor(this.req, this.res)
+        })
+        it('should not show for a user with a personal subscription', function (done) {
+          this.SubscriptionLocator.getUsersSubscription = sinon
+            .stub()
+            .callsArgWith(1, null, {})
+          this.res.render = (pageName, opts) => {
+            expect(opts.showHeaderUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.loadEditor(this.req, this.res)
+        })
+        it('should not show for a user who is a member of a group subscription', function (done) {
+          this.LimitationsManager.userIsMemberOfGroupSubscription = sinon
+            .stub()
+            .callsArgWith(1, null, true)
+          this.res.render = (pageName, opts) => {
+            expect(opts.showHeaderUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.loadEditor(this.req, this.res)
+        })
+        it('should not show for a user with an affiliated paid university', function (done) {
+          this.InstitutionsFeatures.hasLicence = sinon
+            .stub()
+            .callsArgWith(1, null, true)
+          this.res.render = (pageName, opts) => {
+            expect(opts.showHeaderUpgradePrompt).to.equal(false)
+            done()
+          }
+          this.ProjectController.loadEditor(this.req, this.res)
         })
       })
     })

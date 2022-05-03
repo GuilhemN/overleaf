@@ -23,7 +23,7 @@ LayoutContext.Provider.propTypes = {
     detachIsLinked: PropTypes.bool,
     detachRole: PropTypes.string,
     changeLayout: PropTypes.func.isRequired,
-    view: PropTypes.string,
+    view: PropTypes.oneOf(['editor', 'file', 'pdf', 'history']),
     setView: PropTypes.func.isRequired,
     chatIsOpen: PropTypes.bool,
     setChatIsOpen: PropTypes.func.isRequired,
@@ -54,6 +54,14 @@ export function LayoutProvider({ children }) {
         // ensure that the "history:toggle" event is broadcast when switching in or out of history view
         if (value === 'history' || oldValue === 'history') {
           $scope.toggleHistory()
+        }
+
+        if (value === 'editor' && $scope.openFile) {
+          // if a file is currently opened, ensure the view is 'file' instead of
+          // 'editor' when the 'editor' view is requested. This is to ensure
+          // that the entity selected in the file tree is the one visible and
+          // that docs don't take precendence over files.
+          return 'file'
         }
 
         return value
@@ -100,11 +108,13 @@ export function LayoutProvider({ children }) {
     isLinking: detachIsLinking,
     isLinked: detachIsLinked,
     role: detachRole,
+    isRedundant: detachIsRedundant,
   } = useDetachLayout()
 
   useEffect(() => {
     if (debugPdfDetach) {
       console.log('Layout Effect', {
+        detachIsRedundant,
         detachRole,
         detachIsLinking,
         detachIsLinked,
@@ -113,12 +123,23 @@ export function LayoutProvider({ children }) {
 
     if (detachRole !== 'detacher') return // not in a PDF detacher layout
 
+    if (detachIsRedundant) {
+      changeLayout('sideBySide')
+      return
+    }
+
     if (detachIsLinking || detachIsLinked) {
       // the tab is linked to a detached tab (or about to be linked); show
       // editor only
       changeLayout('flat', 'editor')
     }
-  }, [detachRole, detachIsLinking, detachIsLinked, changeLayout])
+  }, [
+    detachIsRedundant,
+    detachRole,
+    detachIsLinking,
+    detachIsLinked,
+    changeLayout,
+  ])
 
   const value = useMemo(
     () => ({

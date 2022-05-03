@@ -65,24 +65,6 @@ mixin card_student_monthly(location)
 		span
 			+price_student_monthly
 	+features_student(location, 'monthly')
-mixin card_student_annual_variant(location)
-	.best-value
-		strong #{translate('best_value')}
-	.card-header
-		h2 #{translate("student")} (#{translate("annual")})
-	h5.tagline #{translate('tagline_student_annual')}
-	.circle
-		span
-			+price_student_annual
-	+btn_buy_student(location, 'annual')
-mixin card_student_monthly_variant(location)
-	.card-header
-		h2 #{translate("student")}
-	h5.tagline #{translate('tagline_student_monthly')}
-	.circle
-		span
-			+price_student_monthly
-	+btn_buy_student(location, 'monthly')
 
 //- Features Lists, used within cards
 mixin features_collaborator(location)
@@ -150,6 +132,13 @@ mixin gen_localized_price_for_plan_view(plan, view)
 			data-ol-currencyCode=currencyCode
 		) #{settings.localizedPlanPricing[currencyCode][plan][view]}
 
+mixin gen_localized_undiscounted_price_for_plan_view(plan, view)
+	for currencyCode in Object.keys(settings.localizedPlanPricing)
+		span(
+			hidden=(currencyCode !== recommendedCurrency)
+			data-ol-currencyCode=currencyCode
+		) #{settings.localizedPlanPricing[currencyCode][plan]['withoutDiscount'][view]}
+
 mixin gen_localized_price_for_plan(plan)
 	div(data-ol-view='monthly')
 		+gen_localized_price_for_plan_view(plan, 'monthly')
@@ -158,9 +147,23 @@ mixin gen_localized_price_for_plan(plan)
 		+gen_localized_price_for_plan_view(plan, 'annual')
 		span.small /yr
 
+mixin gen_localized_undiscounted_price_for_plan(plan)
+	div(data-ol-view='monthly')
+		.undiscounted-price.small
+			span.sr-only Price reduced from
+			+gen_localized_undiscounted_price_for_plan_view(plan, 'monthly')
+			| /mo
+	div(hidden data-ol-view='annual')
+		.undiscounted-price.small
+			span.sr-only Price reduced from
+			+gen_localized_undiscounted_price_for_plan_view(plan, 'annual')
+			| /yr
+
 //- Prices
 mixin price_personal
 	+gen_localized_price_for_plan('personal')
+mixin price_personal_undiscounted
+	+gen_localized_undiscounted_price_for_plan('personal')
 mixin price_collaborator
 	+gen_localized_price_for_plan('collaborator')
 mixin price_professional
@@ -210,27 +213,6 @@ mixin plan_switch(location)
 				href="#"
 			) #{translate("special_price_student")}
 
-mixin plan_switch_variant()
-	ul.nav.nav-pills
-		li.active(data-ol-view-tab='monthly')
-			a.btn.btn-default-outline(
-				href="#"
-			) #{translate("monthly")}
-		li(data-ol-view-tab='annual')
-			a.btn.btn-default-outline(
-				href="#"
-			) #{translate("annual")}
-		li(data-ol-view-tab='student')
-			a.btn.btn-default-outline(
-				href="#"
-			) #{translate("special_price_student")}
-		li()
-			a.btn.btn-default-outline(
-				href="#groups"
-				data-ol-open-group-plan-modal
-				data-ol-location='toggle'
-			) #{translate("group_plans")}
-
 mixin allCardsAndControls(controlsRowSpaced, listLocation)
 	- var location = listLocation ? 'card_' + listLocation : 'card'
 	.row.top-switch(class=(controlsRowSpaced ? "row-spaced" : ""))
@@ -248,17 +230,24 @@ mixin allCardsAndControls(controlsRowSpaced, listLocation)
 							.card.card-first
 								.card-header
 									h2 #{translate("personal")}
-								h5.tagline #{translate("tagline_personal")}
+								.card-byline
+									h5.tagline #{translate("tagline_personal")}
+									h5.special-offer #{translate("limited_time_discount")}
 								.circle
 									+price_personal
+									+price_personal_undiscounted
 								+features_personal(location)
 						.col-md-4
 							.card.card-highlighted
 								.best-value
 									strong #{translate('best_value')}
 								.card-header
-									h2 #{translate("collaborator")}
-								h5.tagline #{translate("tagline_collaborator")}
+									if (useNewPlanName)
+										h2 #{translate("standard")}
+									else
+										h2 #{translate("collaborator")}
+								.card-byline
+									h5.tagline #{translate("tagline_collaborator")}
 								.circle
 									+price_collaborator
 								+features_collaborator(location)
@@ -266,7 +255,8 @@ mixin allCardsAndControls(controlsRowSpaced, listLocation)
 							.card.card-last
 								.card-header
 									h2 #{translate("professional")}
-								h5.tagline #{translate("tagline_professional")}
+								.card-byline
+									h5.tagline #{translate("tagline_professional")}
 								.circle
 									+price_professional
 								+features_professional(location)
@@ -287,70 +277,3 @@ mixin allCardsAndControls(controlsRowSpaced, listLocation)
 					.col-md-4
 						.card.card-last
 							+card_student_monthly(location)
-
-mixin allCardsAndControlsForVariant()
-	- var location = listLocation ? 'card_' + listLocation : 'card'
-	.row.top-switch(class=(controlsRowSpaced ? "row-spaced" : ""))
-		.col-lg-6.col-lg-offset-3.col-md-8.col-md-offset-1
-			+plan_switch_variant('card')
-		.col-md-2.text-right
-			+currency_dropdown
-
-	.row
-		.col-md-10.col-md-offset-1
-			.row
-				for view in ['monthly', 'annual']
-					.card-group.text-centered(data-ol-view=view hidden=(view==='annual'))
-						.col-md-4
-							.card.card-first
-								.card-header
-									h2 #{translate("personal")}
-								h5.tagline #{translate("tagline_personal")}
-								.circle
-									+price_personal
-								ul.list-unstyled
-									li #{translate("one_collaborator")}
-								+btn_buy_personal(location)
-						.col-md-4
-							.card.card-highlighted
-								.best-value
-									strong #{translate('best_value')}
-								.card-header
-									h2 #{translate("collaborator")}
-								h5.tagline #{translate("tagline_collaborator")}
-								.circle
-									+price_collaborator
-								ul.list-unstyled
-									li
-										strong #{translate("collabs_per_proj", {collabcount:10})}
-								+btn_buy_collaborator(location)
-						.col-md-4
-							.card.card-last
-								.card-header
-									h2 #{translate("professional")}
-								h5.tagline #{translate("tagline_professional")}
-								.circle
-									+price_professional
-								ul.list-unstyled
-									li
-										strong #{translate("unlimited_collabs")}
-								+btn_buy_professional(location)
-
-				.card-group.text-centered(hidden data-ol-view='student')
-					.col-md-4
-						.card.card-first
-							.card-header
-								h2 #{translate("free")}
-							h5.tagline #{translate("tagline_free")}
-							.circle #{translate("free")}
-							ul.list-unstyled
-								li #{translate("one_collaborator")}
-							+btn_buy_free(location)
-
-					.col-md-4
-						.card.card-highlighted
-							+card_student_annual_variant(location)
-
-					.col-md-4
-						.card.card-last
-							+card_student_monthly_variant(location)

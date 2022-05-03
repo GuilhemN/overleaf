@@ -57,13 +57,16 @@ async function plansPage(req, res) {
 
   AnalyticsManager.recordEventForSession(req.session, 'plans-page-view')
 
-  const assignment = await SplitTestHandler.promises.getAssignment(
-    req,
-    'plans-page-layout'
-  )
+  const standardPlanNameAssignment =
+    await SplitTestHandler.promises.getAssignment(
+      req,
+      res,
+      'standard-plan-name'
+    )
 
-  const newPlansPageVariant =
-    assignment && assignment.variant === 'new-plans-page'
+  const useNewPlanName =
+    standardPlanNameAssignment &&
+    standardPlanNameAssignment.variant === 'new-plan-name'
 
   res.render('subscriptions/plans-marketing', {
     title: 'plans_and_pricing',
@@ -75,7 +78,7 @@ async function plansPage(req, res) {
     groupPlans: GroupPlansData,
     groupPlanModalOptions,
     groupPlanModalDefaults,
-    newPlansPageVariant,
+    useNewPlanName,
   })
 }
 
@@ -114,7 +117,16 @@ async function paymentPage(req, res) {
       if (recommendedCurrency && currency == null) {
         currency = recommendedCurrency
       }
-      res.render('subscriptions/new', {
+      const assignment = await SplitTestHandler.promises.getAssignment(
+        req,
+        res,
+        'payment-page'
+      )
+      const template =
+        assignment && assignment.variant === 'updated-payment-page'
+          ? 'subscriptions/new-updated'
+          : 'subscriptions/new'
+      res.render(template, {
         title: 'subscribe',
         currency,
         countryCode,
@@ -155,6 +167,14 @@ async function userSubscriptionPage(req, res) {
 
   AnalyticsManager.recordEventForSession(req.session, 'subscription-page-view')
 
+  const assignment = await SplitTestHandler.promises.getAssignment(
+    req,
+    res,
+    'subscription-cancel-button'
+  )
+
+  const cancelButtonNewCopy = assignment && assignment.variant === 'new-copy'
+
   const data = {
     title: 'your_subscription',
     plans,
@@ -170,6 +190,7 @@ async function userSubscriptionPage(req, res) {
     v1SubscriptionStatus,
     currentInstitutionsWithLicence,
     groupPlanModalOptions,
+    cancelButtonNewCopy,
   }
   res.render('subscriptions/dashboard', data)
 }

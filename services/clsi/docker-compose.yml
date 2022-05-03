@@ -12,6 +12,8 @@ services:
       target: base
     volumes:
       - .:/overleaf/services/clsi
+      - ../../node_modules:/overleaf/node_modules
+      - ../../libraries:/overleaf/libraries
     working_dir: /overleaf/services/clsi
     environment:
       MOCHA_GREP: ${MOCHA_GREP}
@@ -26,6 +28,8 @@ services:
       target: base
     volumes:
       - .:/overleaf/services/clsi
+      - ../../node_modules:/overleaf/node_modules
+      - ../../libraries:/overleaf/libraries
     working_dir: /overleaf/services/clsi
     extends:
       file: docker-compose-config.yml
@@ -34,6 +38,7 @@ services:
       ELASTIC_SEARCH_DSN: es:9200
       REDIS_HOST: redis
       QUEUES_REDIS_HOST: redis
+      ANALYTICS_QUEUES_REDIS_HOST: redis
       MONGO_HOST: mongo
       POSTGRES_HOST: postgres
       MOCHA_GREP: ${MOCHA_GREP}

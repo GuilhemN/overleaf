@@ -142,6 +142,11 @@ cite {
 .text-justify {
   text-align: justify;
 }
+@media (min-width: @screen-md-min) {
+  .text-md-right {
+    text-align: right;
+  }
+}
 
 // Contextual colors
 .text-muted {
@@ -206,6 +211,7 @@ cite {
 // Page header
 // -------------------------
 
+.page-separator,
 .page-header {
   padding-bottom: ((@line-height-computed / 2) - 1);
   margin: (@line-height-computed) 0 @line-height-computed;

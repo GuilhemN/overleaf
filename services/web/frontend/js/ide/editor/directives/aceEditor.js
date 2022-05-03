@@ -31,7 +31,8 @@ const SearchBox = ace.require('ace/ext/searchbox')
 // Set the base path that ace will fetch modes/snippets/workers from
 if (window.aceBasePath !== '') {
   syntaxValidationEnabled = true
-  ace.config.set('basePath', `${window.aceBasePath}`)
+  ace.config.set('basePath', window.aceBasePath)
+  ace.config.set('workerPath', window.aceBasePath)
 } else {
   syntaxValidationEnabled = false
 }
@@ -664,12 +665,13 @@ App.directive(
         }
 
         const initTrackChanges = function () {
+          if (!trackChangesManager) return
+
           trackChangesManager.rangesTracker = scope.sharejsDoc.ranges
 
           // Force onChangeSession in order to set up highlights etc.
           trackChangesManager.onChangeSession()
 
-          if (!trackChangesManager) return
           editor.on('changeSelection', trackChangesManager.onChangeSelection)
 
           // Selection also moves with updates elsewhere in the document
@@ -817,16 +819,6 @@ App.directive(
           // need to set annotations after attaching because attaching
           // deletes and then inserts document content
           session.setAnnotations(scope.annotations)
-
-          angular
-            .element($window)
-            .on('click', eventTracking.editingSessionHeartbeat)
-
-          scope.$on('$destroy', () =>
-            angular
-              .element($window)
-              .off('click', eventTracking.editingSessionHeartbeat)
-          )
 
           if (scope.eventsBridge != null) {
             session.on('changeScrollTop', onScroll)

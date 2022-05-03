@@ -11,7 +11,7 @@ Metrics.initialize('clsi')
 const CompileController = require('./app/js/CompileController')
 const ContentController = require('./app/js/ContentController')
 const Settings = require('@overleaf/settings')
-const logger = require('logger-sharelatex')
+const logger = require('@overleaf/logger')
 logger.initialize('clsi')
 if ((Settings.sentry != null ? Settings.sentry.dsn : undefined) != null) {
   logger.initializeErrorReporting(Settings.sentry.dsn)
@@ -271,10 +271,18 @@ if (Settings.processLifespanLimitMs) {
 
 function runSmokeTest() {
   if (Settings.processTooOld) return
+  const INTERVAL = 30 * 1000
+  if (
+    smokeTest.lastRunSuccessful() &&
+    Date.now() - CompileController.lastSuccessfulCompile < INTERVAL / 2
+  ) {
+    logger.log('skipping smoke tests, got recent successful user compile')
+    return setTimeout(runSmokeTest, INTERVAL / 2)
+  }
   logger.log('running smoke tests')
   smokeTest.triggerRun(err => {
     if (err) logger.error({ err }, 'smoke tests failed')
-    setTimeout(runSmokeTest, 30 * 1000)
+    setTimeout(runSmokeTest, INTERVAL)
   })
 }
 if (Settings.smokeTest) {

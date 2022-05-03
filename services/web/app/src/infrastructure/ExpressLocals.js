@@ -12,6 +12,10 @@ const SessionManager = require('../Features/Authentication/SessionManager')
 const PackageVersions = require('./PackageVersions')
 const Modules = require('./Modules')
 const SafeHTMLSubstitute = require('../Features/Helpers/SafeHTMLSubstitution')
+const {
+  canRedirectToAdminDomain,
+  hasAdminAccess,
+} = require('../Features/Helpers/AdminAuthorizationHelper')
 
 let webpackManifest
 switch (process.env.NODE_ENV) {
@@ -278,16 +282,6 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
   })
 
   webRouter.use(function (req, res, next) {
-    res.locals.gaToken =
-      Settings.analytics && Settings.analytics.ga && Settings.analytics.ga.token
-    res.locals.gaTokenV4 =
-      Settings.analytics &&
-      Settings.analytics.ga &&
-      Settings.analytics.ga.tokenV4
-    next()
-  })
-
-  webRouter.use(function (req, res, next) {
     res.locals.getReqQueryParam = field =>
       req.query != null ? req.query[field] : undefined
     next()
@@ -309,6 +303,10 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
     res.locals.getLoggedInUserId = () =>
       SessionManager.getLoggedInUserId(req.session)
     res.locals.getSessionUser = () => SessionManager.getSessionUser(req.session)
+    res.locals.canRedirectToAdminDomain = () =>
+      canRedirectToAdminDomain(SessionManager.getSessionUser(req.session))
+    res.locals.hasAdminAccess = () =>
+      hasAdminAccess(SessionManager.getSessionUser(req.session))
     next()
   })
 
@@ -356,10 +354,18 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
   })
 
   webRouter.use(function (req, res, next) {
+    res.locals.showThinFooter = !Features.hasFeature('saas')
+    next()
+  })
+
+  webRouter.use(function (req, res, next) {
     res.locals.ExposedSettings = {
       isOverleaf: Settings.overleaf != null,
       appName: Settings.appName,
+      dropboxAppName:
+        Settings.apis.thirdPartyDataStore?.dropboxAppName || 'Overleaf',
       hasSamlBeta: req.session.samlBeta,
+      hasAffiliationsFeature: Features.hasFeature('affiliations'),
       hasSamlFeature: Features.hasFeature('saml'),
       samlInitPath: _.get(Settings, ['saml', 'ukamf', 'initPath']),
       hasLinkUrlFeature: Features.hasFeature('link-url'),
@@ -382,6 +388,15 @@ module.exports = function (webRouter, privateApiRouter, publicApiRouter) {
       sentryEnvironment: Settings.sentry.environment,
       sentryRelease: Settings.sentry.release,
       enableSubscriptions: Settings.enableSubscriptions,
+      gaToken:
+        Settings.analytics &&
+        Settings.analytics.ga &&
+        Settings.analytics.ga.token,
+      gaTokenV4:
+        Settings.analytics &&
+        Settings.analytics.ga &&
+        Settings.analytics.ga.tokenV4,
+      cookieDomain: Settings.cookieDomain,
     }
     next()
   })

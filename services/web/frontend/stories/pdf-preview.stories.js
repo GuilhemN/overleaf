@@ -5,13 +5,12 @@ import { setupContext } from './fixtures/context'
 import { Button } from 'react-bootstrap'
 import PdfPreviewPane from '../js/features/pdf-preview/components/pdf-preview-pane'
 import PdfPreview from '../js/features/pdf-preview/components/pdf-preview'
-import PdfPreviewToolbar from '../js/features/pdf-preview/components/pdf-preview-toolbar'
 import PdfFileList from '../js/features/pdf-preview/components/pdf-file-list'
 import { buildFileList } from '../js/features/pdf-preview/util/file-list'
 import PdfLogsViewer from '../js/features/pdf-preview/components/pdf-logs-viewer'
 import PdfPreviewError from '../js/features/pdf-preview/components/pdf-preview-error'
 import PdfPreviewHybridToolbar from '../js/features/pdf-preview/components/pdf-preview-hybrid-toolbar'
-import { useCompileContext } from '../js/shared/context/compile-context'
+import { useDetachCompileContext as useCompileContext } from '../js/shared/context/detach-compile-context'
 import {
   dispatchDocChanged,
   mockBuildFile,
@@ -27,10 +26,9 @@ import { cloneDeep } from 'lodash'
 setupContext()
 
 export default {
-  title: 'PDF Preview',
+  title: 'Editor / PDF Preview',
   component: PdfPreview,
   subcomponents: {
-    PdfPreviewToolbar,
     PdfPreviewHybridToolbar,
     PdfFileList,
     PdfPreviewError,
@@ -326,20 +324,6 @@ export const DisplayError = () => {
         </div>
       ))}
     </>,
-    scope
-  )
-}
-
-export const Toolbar = () => {
-  useFetchMock(fetchMock => {
-    mockCompile(fetchMock, 500)
-    mockBuildFile(fetchMock)
-  })
-
-  return withContextRoot(
-    <div className="pdf">
-      <PdfPreviewToolbar />
-    </div>,
     scope
   )
 }

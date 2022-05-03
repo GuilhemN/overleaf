@@ -1,7 +1,9 @@
 {
   "root": true,
+  "parser": "@typescript-eslint/parser",
   "extends": [
     "eslint:recommended",
+    "plugin:@typescript-eslint/recommended",
     "standard",
     "prettier"
   ],
@@ -16,7 +18,14 @@
   },
   "rules": {
     // do not allow importing of implicit dependencies.
-    "import/no-extraneous-dependencies": "error"
+    "import/no-extraneous-dependencies": "error",
+
+    // disable some TypeScript rules
+    "@typescript-eslint/no-var-requires": "off",
+    "@typescript-eslint/no-unused-vars": "off",
+    "@typescript-eslint/no-empty-function": "off",
+    "@typescript-eslint/no-explicit-any": "off",
+    "@typescript-eslint/no-this-alias": "off"
   },
   "overrides": [
     // NOTE: changing paths may require updating them in the Makefile too.
@@ -36,7 +45,7 @@
     },
     {
       // Test specific rules
-      "files": ["**/test/**/*.js"],
+      "files": ["**/test/**/*.*"],
       "plugins": [
         "mocha",
         "chai-expect",
@@ -94,8 +103,15 @@
       }
     },
     {
+      // Cypress specific rules
+      "files": ["cypress/**/*.{js,ts,tsx}", "**/test/frontend/**/*.spec.{js,ts,tsx}"],
+      "extends": [
+        "plugin:cypress/recommended"
+      ]
+    },
+    {
       // Frontend specific rules
-      "files": ["**/frontend/js/**/*.js", "**/frontend/stories/**/*.js", "**/*.stories.js", "**/test/frontend/**/*.js"],
+      "files": ["**/frontend/js/**/*.{js,ts,tsx}", "**/frontend/stories/**/*.{js,ts,tsx}", "**/*.stories.{js,ts,tsx}", "**/test/frontend/**/*.{js,ts,tsx}", "**/test/frontend/components/**/*.spec.{js,ts,tsx}"],
       "env": {
         "browser": true
       },
@@ -113,7 +129,6 @@
         "plugin:react-hooks/recommended",
         "plugin:jsx-a11y/recommended",
         "standard-jsx",
-        "standard-react",
         "prettier"
       ],
       "globals": {
@@ -129,6 +144,20 @@
         "ExposedSettings": true
       },
       "rules": {
+        // TODO: remove once https://github.com/standard/eslint-config-standard-react/issues/68 (support eslint@8) is fixed.
+        // START: inline standard-react rules
+        // "react/jsx-no-bind": ["error", {
+        //   "allowArrowFunctions": true,
+        //   "allowBind": false,
+        //   "ignoreRefs": true
+        // },],
+        "react/no-did-update-set-state": "error",
+        "react/no-unknown-property": "error",
+        "react/no-unused-prop-types": "error",
+        "react/prop-types": "error",
+        // "react/react-in-jsx-scope": "error",
+        // END: inline standard-react rules
+
         "react/jsx-no-target-blank": ["error", {
           "allowReferrer": true
         }],
@@ -165,6 +194,21 @@
             }
           }
         ]
+      }
+    },
+    // React + TypeScript-specific rules
+    {
+      "files": ["**/*.tsx"],
+      "rules": {
+        "react/prop-types": "off",
+        "no-undef": "off"
+      }
+    },
+    // TypeScript-specific rules
+    {
+      "files": ["**/*.ts"],
+      "rules": {
+        "no-undef": "off"
       }
     },
     {

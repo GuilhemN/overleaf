@@ -1,25 +1,7 @@
-// NOTE: using "legacy" build as main build requires webpack v5
-// import PDFJS from 'pdfjs-dist/webpack'
-import * as PDFJS from 'pdfjs-dist/legacy/build/pdf'
-import * as PDFJSViewer from 'pdfjs-dist/legacy/web/pdf_viewer'
-import PDFJSWorker from 'pdfjs-dist/legacy/build/pdf.worker'
-import 'pdfjs-dist/legacy/web/pdf_viewer.css'
-import getMeta from '../../../utils/meta'
 import { captureMessage } from '../../../infrastructure/error-reporter'
-
-if (typeof window !== 'undefined' && 'Worker' in window) {
-  PDFJS.GlobalWorkerOptions.workerPort = new PDFJSWorker()
-}
-
-// forces the method (required by pdf.js) to be polyfilled by webpack, since
-// processing pdf.js by webpack/babel causes issues loading documents
-// eslint-disable-next-line no-unused-expressions
-Promise.allSettled
 
 const params = new URLSearchParams(window.location.search)
 const disableFontFace = params.get('disable-font-face') === 'true'
-const cMapUrl = getMeta('ol-pdfCMapsPath')
-const imageResourcesPath = getMeta('ol-pdfImageResourcesPath')
 const disableStream = process.env.NODE_ENV !== 'test'
 
 const rangeChunkSize = 128 * 1024 // 128K chunks
@@ -27,6 +9,19 @@ const rangeChunkSize = 128 * 1024 // 128K chunks
 export default class PDFJSWrapper {
   constructor(container) {
     this.container = container
+  }
+
+  async init() {
+    const { PDFJS, PDFJSViewer, cMapUrl, imageResourcesPath } = await import(
+      './pdf-js-versions'
+    ).then(m => {
+      return m.default
+    })
+
+    this.PDFJS = PDFJS
+    this.PDFJSViewer = PDFJSViewer
+    this.cMapUrl = cMapUrl
+    this.imageResourcesPath = imageResourcesPath
 
     // create the event bus
     const eventBus = new PDFJSViewer.EventBus()
@@ -43,7 +38,7 @@ export default class PDFJSWrapper {
 
     // create the viewer
     const viewer = new PDFJSViewer.PDFViewer({
-      container,
+      container: this.container,
       eventBus,
       imageResourcesPath,
       linkService,
@@ -51,6 +46,7 @@ export default class PDFJSWrapper {
       enableScripting: false, // default is false, but set explicitly to be sure
       enableXfa: false, // default is false (2021-10-12), but set explicitly to be sure
       renderInteractiveForms: false,
+      maxCanvasPixels: 8192 * 8192, // default is 4096 * 4096, increased for better resolution at high zoom levels
     })
 
     linkService.setViewer(viewer)
@@ -69,9 +65,9 @@ export default class PDFJSWrapper {
     }
 
     return new Promise((resolve, reject) => {
-      this.loadDocumentTask = PDFJS.getDocument({
+      this.loadDocumentTask = this.PDFJS.getDocument({
         url,
-        cMapUrl,
+        cMapUrl: this.cMapUrl,
         cMapPacked: true,
         disableFontFace,
         rangeChunkSize,
@@ -205,6 +201,8 @@ export default class PDFJSWrapper {
       this.loadDocumentTask.destroy()
       this.loadDocumentTask = undefined
     }
-    this.viewer.destroy()
+    if (this.viewer) {
+      this.viewer.destroy()
+    }
   }
 }

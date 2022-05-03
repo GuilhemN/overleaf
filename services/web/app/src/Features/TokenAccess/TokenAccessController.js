@@ -8,6 +8,9 @@ const OError = require('@overleaf/o-error')
 const { expressify } = require('../../util/promises')
 const AuthorizationManager = require('../Authorization/AuthorizationManager')
 const PrivilegeLevels = require('../Authorization/PrivilegeLevels')
+const {
+  handleAdminDomainRedirect,
+} = require('../Authorization/AuthorizationMiddleware')
 
 const orderedPrivilegeLevels = [
   PrivilegeLevels.NONE,
@@ -83,6 +86,10 @@ async function tokenAccessPage(req, res, next) {
   if (!TokenAccessHandler.isValidToken(token)) {
     return next(new Errors.NotFoundError())
   }
+  if (handleAdminDomainRedirect(req, res)) {
+    // Admin users do not join the project, but view it on the admin domain.
+    return
+  }
   try {
     if (TokenAccessHandler.isReadOnlyToken(token)) {
       const docPublishedInfo =
@@ -153,7 +160,7 @@ async function checkAndGetProjectOrResponseAction(
         ]
       } else {
         logger.warn(
-          { token, projectId },
+          { projectId },
           '[TokenAccess] deny anonymous read-and-write token access'
         )
         AuthenticationController.setRedirectInSession(

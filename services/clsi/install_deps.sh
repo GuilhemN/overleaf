@@ -2,23 +2,23 @@
 set -ex
 
 apt-get update
-apt-get install -y \
-    apt-transport-https \
-    ca-certificates \
-    curl \
-    gnupg \
-    lsb-release
-
-curl -fsSL https://download.docker.com/linux/debian/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-echo \
-  "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/debian \
-  $(lsb_release -cs) stable" \
-  > /etc/apt/sources.list.d/docker.list
-apt-get update
 
 apt-get install -y \
-  docker-ce-cli \
   poppler-utils \
   ghostscript \
 
 rm -rf /var/lib/apt/lists/*
+
+# Allow ImageMagick to process PDF files. This is for tests only, but since we
+# use the production images for tests, this will apply to production as well.
+patch /etc/ImageMagick-6/policy.xml <<EOF
+--- old.xml	2022-03-23 09:16:03.985433900 -0400
++++ new.xml	2022-03-23 09:16:18.625471992 -0400
+@@ -91,6 +91,5 @@
+   <policy domain="coder" rights="none" pattern="PS2" />
+   <policy domain="coder" rights="none" pattern="PS3" />
+   <policy domain="coder" rights="none" pattern="EPS" />
+-  <policy domain="coder" rights="none" pattern="PDF" />
+   <policy domain="coder" rights="none" pattern="XPS" />
+ </policymap>
+EOF

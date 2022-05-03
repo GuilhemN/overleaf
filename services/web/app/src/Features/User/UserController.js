@@ -3,7 +3,6 @@ const UserDeleter = require('./UserDeleter')
 const UserGetter = require('./UserGetter')
 const { User } = require('../../models/User')
 const NewsletterManager = require('../Newsletter/NewsletterManager')
-const UserRegistrationHandler = require('./UserRegistrationHandler')
 const logger = require('@overleaf/logger')
 const metrics = require('@overleaf/metrics')
 const AuthenticationManager = require('../Authentication/AuthenticationManager')
@@ -74,7 +73,11 @@ async function changePassword(req, res, next) {
     req.body.currentPassword
   )
   if (!user) {
-    return HttpErrorHandler.badRequest(req, res, 'Your old password is wrong')
+    return HttpErrorHandler.badRequest(
+      req,
+      res,
+      req.i18n.translate('password_change_old_password_wrong')
+    )
   }
 
   if (req.body.newPassword1 !== req.body.newPassword2) {
@@ -258,6 +261,24 @@ const UserController = {
     )
   },
 
+  subscribe(req, res, next) {
+    const userId = SessionManager.getLoggedInUserId(req.session)
+    UserGetter.getUser(userId, (err, user) => {
+      if (err != null) {
+        return next(err)
+      }
+      NewsletterManager.subscribe(user, err => {
+        if (err != null) {
+          OError.tag(err, 'error subscribing to newsletter')
+          return next(err)
+        }
+        return res.json({
+          message: req.i18n.translate('thanks_settings_updated'),
+        })
+      })
+    })
+  },
+
   unsubscribe(req, res, next) {
     const userId = SessionManager.getLoggedInUserId(req.session)
     UserGetter.getUser(userId, (err, user) => {
@@ -266,12 +287,12 @@ const UserController = {
       }
       NewsletterManager.unsubscribe(user, err => {
         if (err != null) {
-          logger.warn(
-            { err, user },
-            'Failed to unsubscribe user from newsletter'
-          )
+          OError.tag(err, 'error unsubscribing to newsletter')
+          return next(err)
         }
-        res.sendStatus(200)
+        return res.json({
+          message: req.i18n.translate('thanks_settings_updated'),
+        })
       })
     })
   },
@@ -461,25 +482,6 @@ const UserController = {
 
       res.sendStatus(204)
     })
-  },
-
-  register(req, res, next) {
-    const { email } = req.body
-    if (email == null || email === '') {
-      return res.sendStatus(422) // Unprocessable Entity
-    }
-    UserRegistrationHandler.registerNewUserAndSendActivationEmail(
-      email,
-      (error, user, setNewPasswordUrl) => {
-        if (error != null) {
-          return next(error)
-        }
-        res.json({
-          email: user.email,
-          setNewPasswordUrl,
-        })
-      }
-    )
   },
 
   changePassword: expressify(changePassword),

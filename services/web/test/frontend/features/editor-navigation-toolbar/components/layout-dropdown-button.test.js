@@ -6,10 +6,9 @@ import LayoutDropdownButton from '../../../../../frontend/js/features/editor-nav
 import { renderWithEditorContext } from '../../../helpers/render-with-context'
 import * as eventTracking from '../../../../../frontend/js/infrastructure/event-tracking'
 
-const eventTrackingSpy = sinon.spy(eventTracking)
-
 describe('<LayoutDropdownButton />', function () {
   let openStub
+  let sendMBSpy
   const defaultUi = {
     pdfLayout: 'flat',
     view: 'pdf',
@@ -17,12 +16,13 @@ describe('<LayoutDropdownButton />', function () {
 
   beforeEach(function () {
     openStub = sinon.stub(window, 'open')
+    sendMBSpy = sinon.spy(eventTracking, 'sendMB')
     window.metaAttributesCache = new Map()
-    fetchMock.post('express:/project/:projectId/compile/stop', () => 204)
   })
 
   afterEach(function () {
     openStub.restore()
+    sendMBSpy.restore()
     window.metaAttributesCache = new Map()
     fetchMock.restore()
   })
@@ -38,6 +38,47 @@ describe('<LayoutDropdownButton />', function () {
     })
     screen.getByRole('menuitem', {
       name: 'Editor only (hide PDF)',
+    })
+    screen.getByRole('menuitem', {
+      name: 'PDF in separate tab',
+    })
+  })
+
+  it('should not select any option in history view', function () {
+    // Selected is aria-label, visually we show a checkmark
+    renderWithEditorContext(<LayoutDropdownButton />, {
+      ui: { ...defaultUi, view: 'history' },
+    })
+    screen.getByRole('menuitem', {
+      name: 'Editor & PDF',
+    })
+    screen.getByRole('menuitem', {
+      name: 'PDF only (hide editor)',
+    })
+    screen.getByRole('menuitem', {
+      name: 'Editor only (hide PDF)',
+    })
+    screen.getByRole('menuitem', {
+      name: 'PDF in separate tab',
+    })
+  })
+
+  it('should treat file and editor views the same way', function () {
+    // Selected is aria-label, visually we show a checkmark
+    renderWithEditorContext(<LayoutDropdownButton />, {
+      ui: {
+        pdfLayout: 'flat',
+        view: 'file',
+      },
+    })
+    screen.getByRole('menuitem', {
+      name: 'Editor & PDF',
+    })
+    screen.getByRole('menuitem', {
+      name: 'PDF only (hide editor)',
+    })
+    screen.getByRole('menuitem', {
+      name: 'Selected Editor only (hide PDF)',
     })
     screen.getByRole('menuitem', {
       name: 'PDF in separate tab',
@@ -60,13 +101,8 @@ describe('<LayoutDropdownButton />', function () {
       screen.getByText('Layout processing')
     })
 
-    it('should stop compile when detaching', function () {
-      expect(fetchMock.called('express:/project/:projectId/compile/stop')).to.be
-        .true
-    })
-
     it('should record event', function () {
-      sinon.assert.calledWith(eventTrackingSpy.sendMB, 'project-layout-detach')
+      sinon.assert.calledWith(sendMBSpy, 'project-layout-detach')
     })
   })
 
@@ -89,15 +125,11 @@ describe('<LayoutDropdownButton />', function () {
     })
 
     it('should record events', function () {
-      sinon.assert.calledWith(
-        eventTrackingSpy.sendMB,
-        'project-layout-reattach'
-      )
-      sinon.assert.calledWith(
-        eventTrackingSpy.sendMB,
-        'project-layout-change',
-        { layout: 'flat', view: 'editor' }
-      )
+      sinon.assert.calledWith(sendMBSpy, 'project-layout-reattach')
+      sinon.assert.calledWith(sendMBSpy, 'project-layout-change', {
+        layout: 'flat',
+        view: 'editor',
+      })
     })
 
     it('should select new menu item', function () {

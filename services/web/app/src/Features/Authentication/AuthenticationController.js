@@ -24,6 +24,7 @@ const {
   acceptsJson,
 } = require('../../infrastructure/RequestContentTypeDetection')
 const { ParallelLoginError } = require('./AuthenticationErrors')
+const { hasAdminAccess } = require('../Helpers/AdminAuthorizationHelper')
 
 function send401WithChallenge(res) {
   res.setHeader('WWW-Authenticate', 'OverleafLogin')
@@ -106,6 +107,12 @@ const AuthenticationController = {
     if (user === false) {
       return res.redirect('/login')
     } // OAuth2 'state' mismatch
+
+    if (Settings.adminOnlyLogin && !hasAdminAccess(user)) {
+      return res.status(403).json({
+        message: { type: 'error', text: 'Admin only panel' },
+      })
+    }
 
     const auditInfo = AuthenticationController.getAuditInfo(req)
 
@@ -260,9 +267,13 @@ const AuthenticationController = {
         () => {}
       )
     }
-    return UserUpdater.updateUser(user._id.toString(), {
-      $set: { lastLoginIp: req.ip },
-    })
+    return UserUpdater.updateUser(
+      user._id.toString(),
+      {
+        $set: { lastLoginIp: req.ip },
+      },
+      () => {}
+    )
   },
 
   requireLogin() {
@@ -380,7 +391,7 @@ const AuthenticationController = {
       return next()
     }
     const user = SessionManager.getSessionUser(req.session)
-    if (!(user && user.isAdmin)) {
+    if (!hasAdminAccess(user)) {
       return next()
     }
     const email = user.email
@@ -599,7 +610,11 @@ function _loginAsyncHandlers(req, user, anonymousAnalyticsId, isNewUser) {
   LoginRateLimiter.recordSuccessfulLogin(user.email, () => {})
   AuthenticationController._recordSuccessfulLogin(user._id, () => {})
   AuthenticationController.ipMatchCheck(req, user)
-  Analytics.recordEventForUser(user._id, 'user-logged-in')
+  Analytics.recordEventForUser(user._id, 'user-logged-in', {
+    source: req.session.saml
+      ? 'saml'
+      : req.user_info?.auth_provider || 'email-password',
+  })
   Analytics.identifyUser(user._id, anonymousAnalyticsId, isNewUser)
 
   logger.log(

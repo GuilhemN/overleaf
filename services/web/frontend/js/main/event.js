@@ -48,10 +48,11 @@ App.factory('eventTracking', function ($http, localStorage) {
     return localStorage(CACHE_KEY, curCache)
   }
 
-  const _sendEditingSessionHeartbeat = () =>
+  const _sendEditingSessionHeartbeat = segmentation =>
     $http({
       url: `/editingSession/${window.project_id}`,
       method: 'PUT',
+      data: { segmentation },
       headers: {
         'X-CSRF-Token': window.csrfToken,
       },
@@ -69,12 +70,14 @@ App.factory('eventTracking', function ($http, localStorage) {
       }
     },
 
-    editingSessionHeartbeat() {
+    editingSessionHeartbeat(segmentation) {
+      sl_console.log('[Event] heartbeat trigger', segmentation)
       if (!(nextHeartbeat <= new Date())) {
         return
       }
 
-      _sendEditingSessionHeartbeat()
+      sl_console.log('[Event] send heartbeat request', segmentation)
+      _sendEditingSessionHeartbeat(segmentation)
 
       heartbeatsSent++
 

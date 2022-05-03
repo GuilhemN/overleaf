@@ -1,4 +1,6 @@
 // Conditionally enable Sentry based on whether the DSN token is set
+import getMeta from '../utils/meta'
+
 const reporterPromise = window.ExposedSettings.sentryDsn
   ? sentryReporter()
   : nullReporter()
@@ -26,6 +28,7 @@ function sentryReporter() {
             'SecurityError: Permission denied to access property "pathname" on cross-origin object',
             // Ignore unhandled error that is "expected" - see https://github.com/overleaf/issues/issues/3321
             /^Missing PDF/,
+            /^pdfng error Error: MissingPDFException/,
             // Ignore "expected" error from aborted fetch - see https://github.com/overleaf/issues/issues/3321
             /^AbortError/,
             // Ignore spurious error from Ace internals - see https://github.com/overleaf/issues/issues/3321
@@ -50,6 +53,14 @@ function sentryReporter() {
         })
 
         Sentry.setUser({ id: window.user_id })
+
+        const splitTestAssignments = getMeta('ol-splitTestVariants')
+        if (splitTestAssignments) {
+          for (const [name, value] of Object.entries(splitTestAssignments)) {
+            // Ensure Sentry tag name is within the 32-character limit
+            Sentry.setTag(`ol.${name}`.slice(0, 32), value.toString())
+          }
+        }
 
         return Sentry
       })

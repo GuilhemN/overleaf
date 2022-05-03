@@ -134,7 +134,6 @@ export default App.controller(
       $timeout(() => $scope.$broadcast('review-panel:layout'))
     )
 
-    // TODO: unused?
     $scope.$on('review-panel:sizes', (e, sizes) =>
       $scope.$broadcast('editor:set-scroll-size', sizes)
     )
@@ -475,12 +474,16 @@ export default App.controller(
         }
 
         if ($scope.users[change.metadata.user_id] == null) {
-          refreshChangeUsers(change.metadata.user_id)
+          if (!window.isRestrictedTokenMember) {
+            refreshChangeUsers(change.metadata.user_id)
+          }
         }
       }
 
       if (rangesTracker.comments.length > 0) {
-        ensureThreadsAreLoaded()
+        if (!window.isRestrictedTokenMember) {
+          ensureThreadsAreLoaded()
+        }
       }
 
       for (const comment of Array.from(rangesTracker.comments)) {
@@ -520,21 +523,21 @@ export default App.controller(
       }
 
       if (changed) {
-        return $scope.$broadcast('entries:changed')
+        // TODO: unused?
+        $scope.$broadcast('entries:changed')
       }
+
+      return entries
     }
 
     $scope.$on('editor:track-changes:changed', function () {
       const doc_id = $scope.editor.open_doc_id
-      updateEntries(doc_id)
+      const entries = updateEntries(doc_id)
 
       // For now, not worrying about entry panels for rich text
       if (!$scope.editor.showRichText) {
         $scope.$broadcast('review-panel:recalculate-screen-positions')
-        dispatchReviewPanelEvent(
-          'recalculate-screen-positions',
-          getDocEntries($scope.editor.open_doc_id)
-        )
+        dispatchReviewPanelEvent('recalculate-screen-positions', entries)
 
         return $scope.$broadcast('review-panel:layout')
       }

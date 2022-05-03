@@ -208,7 +208,7 @@
 						aggregate-change-entry(
 							entry="entry"
 							user="users[entry.metadata.user_id]"
-							ng-click="gotoEntry(editor.open_doc_id, entry)"
+							ng-click="gotoEntry(doc.doc.id, entry)"
 							permissions="permissions"
 						)
 
@@ -480,6 +480,7 @@ script(type='text/ng-template', id='addCommentEntryTemplate')
 						expandable-text-area
 						ng-model="state.content"
 						ng-keypress="handleCommentKeyPress($event);"
+						ng-keydown="handleCommentKeyDown($event);"
 						placeholder=translate("add_your_comment_here")
 						focus-on="comment:new:open"
 					)

@@ -81,5 +81,15 @@ modules/**/Makefile
 .idea
 .run
 
+# Cypress
+cypress/screenshots/
+cypress/videos/
+cypress/downloads/
+
 # Test fixture zip
 !modules/admin-panel/test/unit/src/data/track-changes-project.zip
+
+# Ace themes for conversion
+modules/source-editor/frontend/js/themes/ace/
+
+!**/fixtures/**/*.log

@@ -10,23 +10,30 @@ nav.navbar.navbar-default.navbar-main
 			else
 				a(href='/', aria-label=settings.appName).navbar-brand
 
+		- var canDisplayAdminMenu = hasAdminAccess()
+		- var canDisplayAdminRedirect = canRedirectToAdminDomain()
+		- var canDisplaySplitTestMenu = hasFeature('saas') && (canDisplayAdminMenu || (getSessionUser() && getSessionUser().staffAccess && (getSessionUser().staffAccess.splitTestMetrics || getSessionUser().staffAccess.splitTestManagement)))
 		.navbar-collapse.collapse(collapse="navCollapsed")
-
 			ul.nav.navbar-nav.navbar-right
-				if (getSessionUser() && getSessionUser().isAdmin)
+				if (canDisplayAdminMenu || canDisplayAdminRedirect || canDisplaySplitTestMenu)
 					li.dropdown(class="subdued", dropdown)
 						a.dropdown-toggle(href, dropdown-toggle)
 							| Admin
 							b.caret
 						ul.dropdown-menu
-							li
-								a(href="/admin") Manage Site
-							li
-								a(href="/admin/user") Manage Users
-							if hasFeature('saas')
+							if canDisplayAdminMenu
+								li
+									a(href="/admin") Manage Site
+								li
+									a(href="/admin/user") Manage Users
+								li
+									a(href="/admin/project") Project URL Lookup
+							if canDisplayAdminRedirect
+								li
+									a(href=settings.adminUrl) Switch to Admin
+							if canDisplaySplitTestMenu
 								li
 									a(href="/admin/split-test") Manage Split Tests
-
 
 				// loop over header_extras
 				each item in ((splitTestVariants && (splitTestVariants['unified-navigation'] === 'show-unified-navigation')) ? nav.header_extras_unified : nav.header_extras)
@@ -81,11 +88,25 @@ nav.navbar.navbar-default.navbar-main
 					// register link
 					if hasFeature('registration-page')
 						li
-							a(href="/register") #{translate('register')}
+							a(
+								href="/register"
+								event-tracking="menu-clicked-register"
+								event-tracking-action="clicked"
+								event-tracking-trigger="click"
+								event-tracking-mb="true"
+								event-segmentation={ page: currentUrl }
+							) #{translate('register')}
 
 					// login link
 					li
-						a(href="/login") #{translate('log_in')}
+						a(
+							href="/login"
+							event-tracking="menu-clicked-login"
+							event-tracking-action="clicked"
+							event-tracking-trigger="click"
+							event-tracking-mb="true"
+							event-segmentation={ page: currentUrl }
+						) #{translate('log_in')}
 
 				// projects link and account menu
 				if getSessionUser()

@@ -8,7 +8,11 @@ block append meta
 	meta(name="ol-thirdPartyIds", data-type="json", content=thirdPartyIds)
 
 block content
-	main.content.content-alt#main-content
+	main.content.content-alt#main-content(
+		event-tracking-mb="true"
+		event-tracking="settings-view"
+		event-tracking-trigger="load"
+	)
 		.container
 			.row
 				.col-md-12.col-lg-10.col-lg-offset-1
@@ -217,7 +221,7 @@ block content
 		.modal-header
 			h3 #{translate("delete_account")}
 		div.modal-body#delete-account-modal
-			p !{translate("delete_account_warning_message_3")}
+			p !{translate("delete_account_warning_message_3", {}, ['strong'])}
 			if settings.createV1AccountOnLogin && settings.overleaf
 				p
 					strong

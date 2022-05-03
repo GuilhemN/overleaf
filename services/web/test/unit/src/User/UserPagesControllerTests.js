@@ -43,9 +43,16 @@ describe('UserPagesController', function () {
           externalUserId: 'testId',
         },
       ],
+      refProviders: {
+        mendeley: true,
+        zotero: true,
+      },
     }
 
-    this.UserGetter = { getUser: sinon.stub() }
+    this.UserGetter = {
+      getUser: sinon.stub(),
+      promises: { getUser: sinon.stub() },
+    }
     this.UserSessionsManager = { getAllUserSessions: sinon.stub() }
     this.dropboxStatus = {}
     this.ErrorController = { notFound: sinon.stub() }
@@ -53,20 +60,30 @@ describe('UserPagesController', function () {
       getLoggedInUserId: sinon.stub().returns(this.user._id),
       getSessionUser: sinon.stub().returns(this.user),
     }
+    this.NewsletterManager = {
+      subscribed: sinon.stub().yields(),
+    }
     this.AuthenticationController = {
       _getRedirectFromSession: sinon.stub(),
       setRedirectInSession: sinon.stub(),
+    }
+    this.SplitTestHandler = {
+      promises: {
+        getAssignment: sinon.stub().resolves({ variant: 'default' }),
+      },
     }
     this.UserPagesController = SandboxedModule.require(modulePath, {
       requires: {
         '@overleaf/settings': this.settings,
         './UserGetter': this.UserGetter,
         './UserSessionsManager': this.UserSessionsManager,
+        '../Newsletter/NewsletterManager': this.NewsletterManager,
         '../Errors/ErrorController': this.ErrorController,
         '../Authentication/AuthenticationController':
           this.AuthenticationController,
         '../Authentication/SessionManager': this.SessionManager,
         request: (this.request = sinon.stub()),
+        '../SplitTests/SplitTestHandler': this.SplitTestHandler,
       },
     })
     this.req = {
@@ -212,19 +229,56 @@ describe('UserPagesController', function () {
     })
   })
 
+  describe('emailPreferencesPage', function () {
+    beforeEach(function () {
+      this.UserGetter.getUser = sinon.stub().yields(null, this.user)
+    })
+
+    it('render page with subscribed status', function (done) {
+      this.NewsletterManager.subscribed.yields(null, true)
+      this.res.render = function (page, data) {
+        page.should.equal('user/email-preferences')
+        data.title.should.equal('newsletter_info_title')
+        data.subscribed.should.equal(true)
+        return done()
+      }
+      return this.UserPagesController.emailPreferencesPage(this.req, this.res)
+    })
+
+    it('render page with unsubscribed status', function (done) {
+      this.NewsletterManager.subscribed.yields(null, false)
+      this.res.render = function (page, data) {
+        page.should.equal('user/email-preferences')
+        data.title.should.equal('newsletter_info_title')
+        data.subscribed.should.equal(false)
+        return done()
+      }
+      return this.UserPagesController.emailPreferencesPage(this.req, this.res)
+    })
+  })
+
   describe('settingsPage', function () {
     beforeEach(function () {
       this.request.get = sinon
         .stub()
         .callsArgWith(1, null, { statusCode: 200 }, { has_password: true })
-      return (this.UserGetter.getUser = sinon
-        .stub()
-        .callsArgWith(1, null, this.user))
+      this.UserGetter.promises.getUser = sinon.stub().resolves(this.user)
     })
 
     it('should render user/settings', function (done) {
       this.res.render = function (page) {
         page.should.equal('user/settings')
+        return done()
+      }
+      return this.UserPagesController.settingsPage(this.req, this.res)
+    })
+
+    it('should render user/settings-react', function (done) {
+      this.SplitTestHandler.promises.getAssignment = sinon
+        .stub()
+        .resolves({ variant: 'react' })
+      this.res.render = function (page) {
+        page.should.equal('user/settings-react')
         return done()
       }
       return this.UserPagesController.settingsPage(this.req, this.res)

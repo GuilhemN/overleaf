@@ -54,11 +54,20 @@ async function deleteThread(req, res) {
 }
 
 async function editMessage(req, res) {
-  const { content } = req.body
+  const { content, userId } = req.body
   const { projectId, threadId, messageId } = req.params
   logger.log({ projectId, threadId, messageId, content }, 'editing message')
   const room = await ThreadManager.findOrCreateThread(projectId, threadId)
-  await MessageManager.updateMessage(room._id, messageId, content, Date.now())
+  const found = await MessageManager.updateMessage(
+    room._id,
+    messageId,
+    userId,
+    content,
+    Date.now()
+  )
+  if (!found) {
+    return res.sendStatus(404)
+  }
   res.sendStatus(204)
 }
 
@@ -67,6 +76,18 @@ async function deleteMessage(req, res) {
   logger.log({ projectId, threadId, messageId }, 'deleting message')
   const room = await ThreadManager.findOrCreateThread(projectId, threadId)
   await MessageManager.deleteMessage(room._id, messageId)
+  res.sendStatus(204)
+}
+
+async function destroyProject(req, res) {
+  const { projectId } = req.params
+  logger.log({ projectId }, 'destroying project')
+  const rooms = await ThreadManager.findAllThreadRoomsAndGlobalThread(projectId)
+  const roomIds = rooms.map(r => r._id)
+  logger.log({ projectId, roomIds }, 'deleting all messages in rooms')
+  await MessageManager.deleteAllMessagesInRooms(roomIds)
+  logger.log({ projectId }, 'deleting all threads in project')
+  await ThreadManager.deleteAllThreadsInProject(projectId)
   res.sendStatus(204)
 }
 
@@ -145,4 +166,5 @@ module.exports = {
   deleteThread: expressify(deleteThread),
   editMessage: expressify(editMessage),
   deleteMessage: expressify(deleteMessage),
+  destroyProject: expressify(destroyProject),
 }

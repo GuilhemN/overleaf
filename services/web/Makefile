@@ -1,4 +1,4 @@
-DOCKER_COMPOSE_FLAGS ?= -f docker-compose.yml --log-level ERROR
+DOCKER_COMPOSE_FLAGS ?= -f docker-compose.yml
 
 BUILD_NUMBER ?= local
 BRANCH_NAME ?= $(shell git rev-parse --abbrev-ref HEAD)
@@ -60,7 +60,7 @@ clean_ci:
 # Tests
 #
 
-test: test_unit test_karma test_acceptance test_frontend
+test: test_unit test_karma test_acceptance test_frontend test_frontend_ct
 
 test_module: test_unit_module test_acceptance_module
 
@@ -136,6 +136,15 @@ test_frontend:
 	COMPOSE_PROJECT_NAME=frontend_test_$(BUILD_DIR_NAME) $(DOCKER_COMPOSE) down -v -t 0
 	COMPOSE_PROJECT_NAME=frontend_test_$(BUILD_DIR_NAME) $(DOCKER_COMPOSE) run --rm test_frontend
 	COMPOSE_PROJECT_NAME=frontend_test_$(BUILD_DIR_NAME) $(DOCKER_COMPOSE) down -v -t 0
+
+#
+# Frontend component tests in Cypress
+#
+
+test_frontend_ct:
+	COMPOSE_PROJECT_NAME=frontend_test_ct_$(BUILD_DIR_NAME) $(DOCKER_COMPOSE) down -v -t 0
+	COMPOSE_PROJECT_NAME=frontend_test_ct_$(BUILD_DIR_NAME) $(DOCKER_COMPOSE) run --rm test_frontend_ct
+	COMPOSE_PROJECT_NAME=frontend_test_ct_$(BUILD_DIR_NAME) $(DOCKER_COMPOSE) down -v -t 0
 
 #
 # Acceptance tests
@@ -367,17 +376,17 @@ $(WITH_NODE_MODULES_PATH): export PATH=$(NODE_MODULES_PATH)
 lint: lint_backend
 lint_backend:
 	npx eslint \
-		app.js \
-		'app/**/*.js' \
-		'modules/*/index.js' \
-		'modules/*/app/**/*.js' \
+		'app.{js,ts,tsx}' \
+		'app/**/*.{js,ts,tsx}' \
+		'modules/*/index.{js,ts,tsx}' \
+		'modules/*/app/**/*.{js,ts,tsx}' \
 		--max-warnings=0
 
 lint: lint_frontend
 lint_frontend:
 	npx eslint \
-		'frontend/**/*.js' \
-		'modules/*/frontend/**/*.js' \
+		'frontend/**/*.{js,ts,tsx}' \
+		'modules/**/frontend/**/*.{js,ts,tsx}' \
 		--max-warnings=0
 
 lint: lint_test
@@ -385,34 +394,34 @@ lint_test: lint_test_app
 lint_test_app: lint_test_app_unit
 lint_test_app_unit:
 	npx eslint \
-		'test/unit/**/*.js' \
+		'test/unit/**/*.{js,ts,tsx}' \
 		--max-warnings=0
 
 lint_test_app: lint_test_app_rest
 lint_test_app_rest:
 	npx eslint \
-		'test/**/*.js' \
-		--ignore-pattern 'test/unit/**/*.js' \
+		'test/**/*.{js,ts,tsx}' \
+		--ignore-pattern 'test/unit/**/*.{js,ts,tsx}' \
 		--max-warnings=0
 
 lint_test: lint_test_modules
 lint_test_modules:
 	npx eslint \
-		'modules/*/test/**/*.js' \
+		'modules/*/test/**/*.{js,ts,tsx}' \
 		--max-warnings=0
 
 lint: lint_misc
 # migrations, scripts, webpack config, karma config
 lint_misc:
 	npx eslint . \
-		--ignore-pattern app.js \
-		--ignore-pattern 'app/**/*.js' \
-		--ignore-pattern 'modules/*/app/**/*.js' \
-		--ignore-pattern 'modules/*/index.js' \
-		--ignore-pattern 'frontend/**/*.js' \
-		--ignore-pattern 'modules/*/frontend/**/*.js' \
-		--ignore-pattern 'test/**/*.js' \
-		--ignore-pattern 'modules/*/test/**/*.js' \
+		--ignore-pattern 'app.{js,ts,tsx}' \
+		--ignore-pattern 'app/**/*.{js,ts,tsx}' \
+		--ignore-pattern 'modules/*/app/**/*.{js,ts,tsx}' \
+		--ignore-pattern 'modules/*/index.{js,ts,tsx}' \
+		--ignore-pattern 'frontend/**/*.{js,ts,tsx}' \
+		--ignore-pattern 'modules/**/frontend/**/*.{js,ts,tsx}' \
+		--ignore-pattern 'test/**/*.{js,ts,tsx}' \
+		--ignore-pattern 'modules/*/test/**/*.{js,ts,tsx}' \
 		--max-warnings=0
 
 lint: lint_pug
@@ -426,6 +435,10 @@ lint_locales:
 lint: lint_flag_res_send_usage
 lint_flag_res_send_usage:
 	bin/lint_flag_res_send_usage
+
+#lint: typecheck_frontend
+typecheck_frontend:
+	npx tsc --noEmit
 
 lint_in_docker:
 	$(RUN_LINT_FORMAT) make lint -j --output-sync

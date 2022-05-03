@@ -1,10 +1,10 @@
 import classNames from 'classnames'
-import { memo, useCallback, useEffect, useState } from 'react'
+import { memo, useCallback, useEffect, useState, useRef } from 'react'
 import PropTypes from 'prop-types'
 import { useIdeContext } from '../../../shared/context/ide-context'
 import { useProjectContext } from '../../../shared/context/project-context'
 import { getJSON } from '../../../infrastructure/fetch-json'
-import { useCompileContext } from '../../../shared/context/compile-context'
+import { useDetachCompileContext as useCompileContext } from '../../../shared/context/detach-compile-context'
 import { useLayoutContext } from '../../../shared/context/layout-context'
 import useScopeValue from '../../../shared/hooks/use-scope-value'
 import { Button, OverlayTrigger, Tooltip } from 'react-bootstrap'
@@ -15,6 +15,8 @@ import useAbortController from '../../../shared/hooks/use-abort-controller'
 import useDetachState from '../../../shared/hooks/use-detach-state'
 import useDetachAction from '../../../shared/hooks/use-detach-action'
 import localStorage from '../../../infrastructure/local-storage'
+import { useFileTreeData } from '../../../shared/context/file-tree-data-context'
+import useScopeEventListener from '../../../shared/hooks/use-scope-event-listener'
 
 function GoToCodeButton({
   position,
@@ -64,6 +66,7 @@ function GoToPdfButton({
   syncToPdf,
   syncToPdfInFlight,
   isDetachLayout,
+  hasSingleSelectedDoc,
 }) {
   const { t } = useTranslation()
   const tooltipPlacement = isDetachLayout ? 'bottom' : 'right'
@@ -91,7 +94,7 @@ function GoToPdfButton({
         bsStyle="default"
         bsSize="xs"
         onClick={() => syncToPdf(cursorPosition)}
-        disabled={syncToPdfInFlight || !cursorPosition}
+        disabled={syncToPdfInFlight || !cursorPosition || !hasSingleSelectedDoc}
         className={buttonClasses}
         aria-label={t('go_to_code_location_in_pdf')}
       >
@@ -109,8 +112,16 @@ function PdfSynctexControls() {
 
   const { detachRole } = useLayoutContext()
 
-  const { clsiServerId, pdfUrl, pdfViewer, position, setHighlights } =
-    useCompileContext()
+  const {
+    clsiServerId,
+    pdfUrl,
+    pdfViewer,
+    position,
+    setShowLogs,
+    setHighlights,
+  } = useCompileContext()
+
+  const { selectedEntities } = useFileTreeData()
 
   const [cursorPosition, setCursorPosition] = useState(() => {
     const position = localStorage.getItem(
@@ -123,32 +134,19 @@ function PdfSynctexControls() {
 
   const { signal } = useAbortController()
 
-  // for detacher editor tab, which cannot access pdfUrl in a scope value in
-  // detached state
-  const [pdfExists, setPdfExists] = useDetachState(
-    'pdf-exists',
-    !!pdfUrl,
-    'detached',
-    'detacher'
-  )
-
-  useEffect(() => {
-    setPdfExists(!!pdfUrl)
-  }, [pdfUrl, setPdfExists])
-
   useEffect(() => {
     const listener = event => setCursorPosition(event.detail)
     window.addEventListener('cursor:editor:update', listener)
     return () => window.removeEventListener('cursor:editor:update', listener)
   }, [ide])
 
-  const [syncToPdfInFlight, setSyncToPdfInFlight] = useDetachState(
-    'sync-to-pdf-inflight',
+  const [syncToPdfInFlight, setSyncToPdfInFlight] = useState(false)
+  const [syncToCodeInFlight, setSyncToCodeInFlight] = useDetachState(
+    'sync-to-code-inflight',
     false,
-    'detached',
-    'detacher'
+    'detacher',
+    'detached'
   )
-  const [syncToCodeInFlight, setSyncToCodeInFlight] = useState(false)
 
   const [, setSynctexError] = useScopeValue('sync_tex_error')
 
@@ -168,7 +166,7 @@ function PdfSynctexControls() {
     return path
   }, [ide])
 
-  const _goToCodeLine = useCallback(
+  const goToCodeLine = useCallback(
     (file, line) => {
       if (file) {
         const doc = ide.fileTreeManager.findEntityByPath(file)
@@ -189,14 +187,7 @@ function PdfSynctexControls() {
     [ide, isMounted, setSynctexError]
   )
 
-  const goToCodeLine = useDetachAction(
-    'go-to-code-line',
-    _goToCodeLine,
-    'detached',
-    'detacher'
-  )
-
-  const _goToPdfLocation = useCallback(
+  const goToPdfLocation = useCallback(
     params => {
       setSyncToPdfInFlight(true)
 
@@ -206,6 +197,7 @@ function PdfSynctexControls() {
 
       getJSON(`/project/${projectId}/sync/code?${params}`, { signal })
         .then(data => {
+          setShowLogs(false)
           setHighlights(data.pdf)
         })
         .catch(error => {
@@ -221,17 +213,11 @@ function PdfSynctexControls() {
       clsiServerId,
       isMounted,
       projectId,
+      setShowLogs,
       setHighlights,
       setSyncToPdfInFlight,
       signal,
     ]
-  )
-
-  const goToPdfLocation = useDetachAction(
-    'go-to-pdf-location',
-    _goToPdfLocation,
-    'detacher',
-    'detached'
   )
 
   const syncToPdf = useCallback(
@@ -247,7 +233,19 @@ function PdfSynctexControls() {
     [getCurrentFilePath, goToPdfLocation]
   )
 
-  const syncToCode = useCallback(
+  const cursorPositionRef = useRef(cursorPosition)
+
+  useEffect(() => {
+    cursorPositionRef.current = cursorPosition
+  }, [cursorPosition])
+
+  const handleSyncToPdf = useCallback(() => {
+    syncToPdf(cursorPositionRef.current)
+  }, [syncToPdf])
+
+  useScopeEventListener('cursor:editor:syncToPdf', handleSyncToPdf)
+
+  const _syncToCode = useCallback(
     (position, visualOffset = 0) => {
       setSyncToCodeInFlight(true)
       // FIXME: this actually works better if it's halfway across the
@@ -304,6 +302,13 @@ function PdfSynctexControls() {
     ]
   )
 
+  const syncToCode = useDetachAction(
+    'sync-to-code',
+    _syncToCode,
+    'detached',
+    'detacher'
+  )
+
   useEffect(() => {
     const listener = event => syncToCode(event.detail)
     window.addEventListener('synctex:sync-to-position', listener)
@@ -312,7 +317,32 @@ function PdfSynctexControls() {
     }
   }, [syncToCode])
 
-  if (!pdfExists || pdfViewer === 'native') {
+  const [hasSingleSelectedDoc, setHasSingleSelectedDoc] = useDetachState(
+    'has-single-selected-doc',
+    false,
+    'detacher',
+    'detached'
+  )
+
+  useEffect(() => {
+    if (selectedEntities.length !== 1) {
+      setHasSingleSelectedDoc(false)
+      return
+    }
+
+    if (selectedEntities[0].type !== 'doc') {
+      setHasSingleSelectedDoc(false)
+      return
+    }
+
+    setHasSingleSelectedDoc(true)
+  }, [selectedEntities, setHasSingleSelectedDoc])
+
+  if (!position) {
+    return null
+  }
+
+  if (!pdfUrl || pdfViewer === 'native') {
     return null
   }
 
@@ -324,6 +354,7 @@ function PdfSynctexControls() {
           syncToPdf={syncToPdf}
           syncToPdfInFlight={syncToPdfInFlight}
           isDetachLayout
+          hasSingleSelectedDoc={hasSingleSelectedDoc}
         />
       </>
     )
@@ -345,6 +376,7 @@ function PdfSynctexControls() {
           cursorPosition={cursorPosition}
           syncToPdf={syncToPdf}
           syncToPdfInFlight={syncToPdfInFlight}
+          hasSingleSelectedDoc={hasSingleSelectedDoc}
         />
 
         <GoToCodeButton
@@ -371,4 +403,5 @@ GoToPdfButton.propTypes = {
   isDetachLayout: PropTypes.bool,
   syncToPdf: PropTypes.func.isRequired,
   syncToPdfInFlight: PropTypes.bool.isRequired,
+  hasSingleSelectedDoc: PropTypes.bool.isRequired,
 }

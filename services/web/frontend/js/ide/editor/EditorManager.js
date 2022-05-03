@@ -20,6 +20,7 @@ import './directives/aceEditor'
 import './directives/toggleSwitch'
 import './controllers/SavingNotificationController'
 import './controllers/CompileButton'
+import getMeta from '../../utils/meta'
 let EditorManager
 
 export default EditorManager = (function () {
@@ -40,7 +41,9 @@ export default EditorManager = (function () {
         opening: true,
         trackChanges: false,
         wantTrackChanges: false,
+        docTooLongErrorShown: false,
         showRichText: this.showRichText(),
+        newSourceEditor: this.newSourceEditor(),
         showSymbolPalette: false,
         toggleSymbolPalette: () => {
           const newValue = !this.$scope.editor.showSymbolPalette
@@ -54,6 +57,7 @@ export default EditorManager = (function () {
           ide.$scope.$emit('editor:replace-selection', symbol.command)
           eventTracking.sendMB('symbol-palette-insert')
         },
+        multiSelectedCount: 0,
       }
 
       window.addEventListener('editor:insert-symbol', event => {
@@ -129,10 +133,29 @@ export default EditorManager = (function () {
       })
     }
 
+    getEditorType() {
+      if (!this.$scope.editor.sharejs_doc) {
+        return null
+      }
+      return this.$scope.editor.sharejs_doc.editorType()
+    }
+
     showRichText() {
       return (
         this.localStorage(`editor.mode.${this.$scope.project_id}`) ===
         'rich-text'
+      )
+    }
+
+    newSourceEditor() {
+      // only use the new source editor if the option to switch is available
+      if (!getMeta('ol-showNewSourceEditorOption')) {
+        return false
+      }
+
+      return (
+        this.localStorage(`editor.source_editor.${this.$scope.project_id}`) ===
+        'cm6'
       )
     }
 
@@ -202,6 +225,7 @@ export default EditorManager = (function () {
       if (doc.id === this.$scope.editor.open_doc_id && !options.forceReopen) {
         // automatically update the file tree whenever the file is opened
         this.ide.fileTreeManager.selectEntity(doc)
+        this.$scope.$broadcast('file-tree.reselectDoc', doc.id)
         this.$scope.$apply(() => {
           return done(false)
         })
@@ -326,16 +350,21 @@ export default EditorManager = (function () {
           message = ''
         }
         if (/maxDocLength/.test(message)) {
-          this.ide.showGenericMessageModal(
+          this.$scope.docTooLongErrorShown = true
+          this.openDoc(doc, { forceReopen: true })
+          const genericMessageModal = this.ide.showGenericMessageModal(
             'Document Too Long',
             'Sorry, this file is too long to be edited manually. Please upload it directly.'
           )
+          genericMessageModal.result.finally(() => {
+            this.$scope.docTooLongErrorShown = false
+          })
         } else if (/too many comments or tracked changes/.test(message)) {
           this.ide.showGenericMessageModal(
             'Too many comments or tracked changes',
             'Sorry, this file has too many comments or tracked changes. Please try accepting or rejecting some existing changes, or resolving and deleting some comments.'
           )
-        } else {
+        } else if (!this.$scope.docTooLongErrorShown) {
           // Do not allow this doc to open another error modal.
           sharejs_doc.off('error')
 

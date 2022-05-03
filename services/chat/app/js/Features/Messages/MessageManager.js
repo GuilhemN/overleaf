@@ -39,17 +39,27 @@ async function deleteAllMessagesInRoom(roomId) {
   })
 }
 
-async function updateMessage(roomId, messageId, content, timestamp) {
+async function deleteAllMessagesInRooms(roomIds) {
+  await db.messages.deleteMany({
+    room_id: { $in: roomIds },
+  })
+}
+
+async function updateMessage(roomId, messageId, userId, content, timestamp) {
   const query = _ensureIdsAreObjectIds({
     _id: messageId,
     room_id: roomId,
   })
-  await db.messages.updateOne(query, {
+  if (userId) {
+    query.user_id = ObjectId(userId)
+  }
+  const res = await db.messages.updateOne(query, {
     $set: {
       content,
       edited_at: timestamp,
     },
   })
+  return res.modifiedCount === 1
 }
 
 async function deleteMessage(roomId, messageId) {
@@ -78,6 +88,7 @@ module.exports = MessageManager = {
   getMessages,
   findAllMessagesInRooms,
   deleteAllMessagesInRoom,
+  deleteAllMessagesInRooms,
   updateMessage,
   deleteMessage,
 }

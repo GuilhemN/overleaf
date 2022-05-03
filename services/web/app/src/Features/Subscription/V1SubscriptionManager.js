@@ -19,40 +19,6 @@ const { V1ConnectionError, NotFoundError } = require('../Errors/Errors')
 const { promisifyAll } = require('../../util/promises')
 
 module.exports = V1SubscriptionManager = {
-  // Returned planCode = 'v1_pro' | 'v1_pro_plus' | 'v1_student' | 'v1_free' | null
-  // For this to work, we need plans in settings with plan-codes:
-  //   - 'v1_pro'
-  //   - 'v1_pro_plus'
-  //   - 'v1_student'
-  //   - 'v1_free'
-  getPlanCodeFromV1(userId, callback) {
-    if (callback == null) {
-      callback = function () {}
-    }
-    return V1SubscriptionManager._v1Request(
-      userId,
-      {
-        method: 'GET',
-        url(v1Id) {
-          return `/api/v1/sharelatex/users/${v1Id}/plan_code`
-        },
-      },
-      function (error, body, v1Id) {
-        if (error != null) {
-          return callback(error)
-        }
-        let planName = body != null ? body.plan_name : undefined
-        if (['pro', 'pro_plus', 'student', 'free'].includes(planName)) {
-          planName = `v1_${planName}`
-        } else {
-          // Throw away 'anonymous', etc as being equivalent to null
-          planName = null
-        }
-        return callback(null, planName, v1Id)
-      }
-    )
-  },
-
   getSubscriptionsFromV1(userId, callback) {
     if (callback == null) {
       callback = function () {}
@@ -166,7 +132,7 @@ module.exports = V1SubscriptionManager = {
           sendImmediately: true,
         },
         json: true,
-        timeout: 15 * 1000,
+        timeout: settings.apis.v1.timeout,
       }
       if (options.method === 'GET') {
         requestOptions.maxAttempts = 3
@@ -222,7 +188,4 @@ function __guard__(value, transform) {
 
 module.exports.promises = promisifyAll(module.exports, {
   without: ['getGrandfatheredFeaturesForV1User'],
-  multiResult: {
-    getPlanCodeFromV1: ['planCode', 'v1Id'],
-  },
 })

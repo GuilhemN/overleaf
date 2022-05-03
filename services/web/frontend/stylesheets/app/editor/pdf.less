@@ -174,7 +174,10 @@
     border-top-left-radius: 0;
     border-bottom-left-radius: 0;
   }
-  &[disabled] {
+  &[disabled],
+  &[disabled].active,
+  &[disabled]:hover,
+  &[disabled]:focus {
     background-color: mix(@btn-primary-bg, @toolbar-alt-bg-color, 65%);
     .opacity(1);
   }
@@ -198,7 +201,7 @@
     .full-size;
     background-color: @pdfjs-bg;
     overflow: scroll;
-    canvas,
+    .canvasWrapper > canvas,
     div.pdf-canvas {
       background: white;
       box-shadow: @pdf-page-shadow-color 0px 0px 10px;

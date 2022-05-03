@@ -2,7 +2,7 @@ import { isMainFile } from './editor-files'
 import getMeta from '../../../utils/meta'
 import { deleteJSON, postJSON } from '../../../infrastructure/fetch-json'
 import { debounce } from 'lodash'
-import { trackPdfDownload } from '../../../ide/pdf/controllers/PdfJsMetrics'
+import { trackPdfDownload } from './metrics'
 
 const AUTO_COMPILE_MAX_WAIT = 5000
 // We add a 2 second debounce to sending user changes to server if they aren't
@@ -15,6 +15,7 @@ const searchParams = new URLSearchParams(window.location.search)
 
 export default class DocumentCompiler {
   constructor({
+    compilingRef,
     projectId,
     rootDocId,
     setChangedAt,
@@ -25,6 +26,7 @@ export default class DocumentCompiler {
     cleanupCompileResult,
     signal,
   }) {
+    this.compilingRef = compilingRef
     this.projectId = projectId
     this.rootDocId = rootDocId
     this.setChangedAt = setChangedAt
@@ -54,18 +56,13 @@ export default class DocumentCompiler {
   // The main "compile" function.
   // Call this directly to run a compile now, otherwise call debouncedAutoCompile.
   async compile(options = {}) {
-    // only compile if the feature flag is enabled
-    if (!window.showNewPdfPreview) {
-      return
+    if (!options) {
+      options = {}
     }
 
     // set "compiling" to true (in the React component's state), and return if it was already true
-    let wasCompiling
-
-    this.setCompiling(oldValue => {
-      wasCompiling = oldValue
-      return true
-    })
+    const wasCompiling = this.compilingRef.current
+    this.setCompiling(true)
 
     if (wasCompiling) {
       if (options.isAutoCompileOnChange) {

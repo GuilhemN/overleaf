@@ -4,9 +4,6 @@ const UserMembershipAuthorization = {
       if (!req.user) {
         return false
       }
-      if (req.user.isAdmin) {
-        return true
-      }
       return (
         requiredStaffAccess &&
         req.user.staffAccess &&

@@ -297,11 +297,31 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     UserController.clearSessions
   )
 
+  // deprecated
   webRouter.delete(
     '/user/newsletter/unsubscribe',
     AuthenticationController.requireLogin(),
     UserController.unsubscribe
   )
+
+  webRouter.post(
+    '/user/newsletter/unsubscribe',
+    AuthenticationController.requireLogin(),
+    UserController.unsubscribe
+  )
+
+  webRouter.post(
+    '/user/newsletter/subscribe',
+    AuthenticationController.requireLogin(),
+    UserController.subscribe
+  )
+
+  webRouter.get(
+    '/user/email-preferences',
+    AuthenticationController.requireLogin(),
+    UserPagesController.emailPreferencesPage
+  )
+
   webRouter.post(
     '/user/delete',
     RateLimiterMiddleware.rateLimit({
@@ -563,21 +583,25 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.post(
     '/Project/:Project_id/archive',
+    AuthenticationController.requireLogin(),
     AuthorizationMiddleware.ensureUserCanReadProject,
     ProjectController.archiveProject
   )
   webRouter.delete(
     '/Project/:Project_id/archive',
+    AuthenticationController.requireLogin(),
     AuthorizationMiddleware.ensureUserCanReadProject,
     ProjectController.unarchiveProject
   )
   webRouter.post(
     '/project/:project_id/trash',
+    AuthenticationController.requireLogin(),
     AuthorizationMiddleware.ensureUserCanReadProject,
     ProjectController.trashProject
   )
   webRouter.delete(
     '/project/:project_id/trash',
+    AuthenticationController.requireLogin(),
     AuthorizationMiddleware.ensureUserCanReadProject,
     ProjectController.untrashProject
   )
@@ -609,24 +633,28 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
   )
   webRouter.get(
     '/project/:Project_id/updates',
+    AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.selectHistoryApi,
     HistoryController.proxyToHistoryApiAndInjectUserDetails
   )
   webRouter.get(
     '/project/:Project_id/doc/:doc_id/diff',
+    AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.selectHistoryApi,
     HistoryController.proxyToHistoryApi
   )
   webRouter.get(
     '/project/:Project_id/diff',
+    AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.selectHistoryApi,
     HistoryController.proxyToHistoryApiAndInjectUserDetails
   )
   webRouter.get(
     '/project/:Project_id/filetree/diff',
+    AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.selectHistoryApi,
     HistoryController.proxyToHistoryApi
@@ -654,6 +682,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
       maxRequests: 30,
       timeInterval: 60 * 60,
     }),
+    AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.downloadZipOfVersion
   )
@@ -665,6 +694,7 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.get(
     '/project/:Project_id/labels',
+    AuthorizationMiddleware.blockRestrictedUserFromProject,
     AuthorizationMiddleware.ensureUserCanReadProject,
     HistoryController.selectHistoryApi,
     HistoryController.ensureProjectHistoryEnabled,
@@ -703,11 +733,23 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
 
   webRouter.get(
     '/Project/:Project_id/download/zip',
+    RateLimiterMiddleware.rateLimit({
+      endpointName: 'zip-download',
+      params: ['Project_id'],
+      maxRequests: 10,
+      timeInterval: 60,
+    }),
     AuthorizationMiddleware.ensureUserCanReadProject,
     ProjectDownloadsController.downloadProject
   )
   webRouter.get(
     '/project/download/zip',
+    AuthenticationController.requireLogin(),
+    RateLimiterMiddleware.rateLimit({
+      endpointName: 'multiple-projects-zip-download',
+      maxRequests: 10,
+      timeInterval: 60,
+    }),
     AuthorizationMiddleware.ensureUserCanReadMultipleProjects,
     ProjectDownloadsController.downloadMultipleProjects
   )
@@ -1021,27 +1063,12 @@ function initialize(webRouter, privateApiRouter, publicApiRouter) {
     }
   })
 
-  // Admin Stuff
   webRouter.get(
     '/admin',
     AuthorizationMiddleware.ensureUserIsSiteAdmin,
     AdminController.index
   )
-  webRouter.get(
-    '/admin/user',
-    AuthorizationMiddleware.ensureUserIsSiteAdmin,
-    (req, res) => res.redirect('/admin/register')
-  ) // this gets removed by admin-panel addon
-  webRouter.get(
-    '/admin/register',
-    AuthorizationMiddleware.ensureUserIsSiteAdmin,
-    AdminController.registerNewUser
-  )
-  webRouter.post(
-    '/admin/register',
-    AuthorizationMiddleware.ensureUserIsSiteAdmin,
-    UserController.register
-  )
+
   if (!Features.hasFeature('saas')) {
     webRouter.post(
       '/admin/openEditor',

@@ -56,7 +56,7 @@ app.get('/project/:project_id/doc/:doc_id/peek', HttpController.peekDoc)
 // Add 64kb overhead for the JSON encoding, and double the size to allow for ranges in the json payload
 app.post(
   '/project/:project_id/doc/:doc_id',
-  bodyParser.json({ limit: (Settings.max_doc_length + 64 * 1024) * 2 }),
+  bodyParser.json({ limit: Settings.maxJsonRequestSize }),
   HttpController.updateDoc
 )
 app.patch(
@@ -78,7 +78,7 @@ app.delete('/project/:project_id/doc/:doc_id', (req, res) => {
 app.post('/project/:project_id/archive', HttpController.archiveAllDocs)
 app.post('/project/:project_id/doc/:doc_id/archive', HttpController.archiveDoc)
 app.post('/project/:project_id/unarchive', HttpController.unArchiveAllDocs)
-app.post('/project/:project_id/destroy', HttpController.destroyAllDocs)
+app.post('/project/:project_id/destroy', HttpController.destroyProject)
 
 app.get('/health_check', HttpController.healthCheck)
 

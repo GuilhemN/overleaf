@@ -25,17 +25,16 @@ import OnlineUsersManager from './ide/online-users/OnlineUsersManager'
 import HistoryManager from './ide/history/HistoryManager'
 import HistoryV2Manager from './ide/history/HistoryV2Manager'
 import PermissionsManager from './ide/permissions/PermissionsManager'
-import PdfManager from './ide/pdf/PdfManager'
 import BinaryFilesManager from './ide/binary-files/BinaryFilesManager'
 import ReferencesManager from './ide/references/ReferencesManager'
 import MetadataManager from './ide/metadata/MetadataManager'
-import ReviewPanelManager from './ide/review-panel/ReviewPanelManager'
+import './ide/review-panel/ReviewPanelManager'
 import OutlineManager from './features/outline/outline-manager'
 import SafariScrollPatcher from './ide/SafariScrollPatcher'
 import {
   loadServiceWorker,
   unregisterServiceWorker,
-} from './ide/pdfng/directives/serviceWorkerManager'
+} from './features/pdf-preview/util/service-worker'
 import './ide/cobranding/CobrandingDataService'
 import './ide/settings/index'
 import './ide/chat/index'
@@ -68,6 +67,7 @@ import './shared/context/controllers/root-context-controller'
 import './features/editor-navigation-toolbar/controllers/editor-navigation-toolbar-controller'
 import './features/pdf-preview/controllers/pdf-preview-controller'
 import './features/share-project-modal/controllers/react-share-project-modal-controller'
+import './features/source-editor/controllers/editor-switch-controller'
 import getMeta from './utils/meta'
 
 App.controller(
@@ -80,7 +80,8 @@ App.controller(
     eventTracking,
     metadata,
     $q,
-    CobrandingDataService
+    CobrandingDataService,
+    $window
   ) {
     // Don't freak out if we're already in an apply callback
     let err, pdfLayout, userAgent
@@ -208,7 +209,6 @@ App.controller(
     } else {
       ide.historyManager = new HistoryManager(ide, $scope)
     }
-    ide.pdfManager = new PdfManager(ide, $scope)
     ide.permissionsManager = new PermissionsManager(ide, $scope)
     ide.binaryFilesManager = new BinaryFilesManager(ide, $scope)
     ide.metadataManager = new MetadataManager(ide, $scope, metadata)
@@ -256,8 +256,25 @@ If the project has been renamed please look in your project list for a new proje
       return (_loaded = true)
     })
 
-    $scope.$on('cursor:editor:update', eventTracking.editingSessionHeartbeat)
-    $scope.$on('scroll:editor:update', eventTracking.editingSessionHeartbeat)
+    ide.editingSessionHeartbeat = () => {
+      const segmentation = {
+        editorType: ide.editorManager.getEditorType(),
+      }
+      eventTracking.editingSessionHeartbeat(segmentation)
+    }
+
+    $scope.$on('cursor:editor:update', () => {
+      ide.editingSessionHeartbeat()
+    })
+    $scope.$on('scroll:editor:update', () => {
+      ide.editingSessionHeartbeat()
+    })
+
+    angular.element($window).on('click', ide.editingSessionHeartbeat)
+
+    $scope.$on('$destroy', () =>
+      angular.element($window).off('click', ide.editingSessionHeartbeat)
+    )
 
     const DARK_THEMES = [
       'ambiance',
@@ -386,6 +403,11 @@ If the project has been renamed please look in your project list for a new proje
 
     // Allow service worker to be removed via the websocket
     ide.$scope.$on('service-worker:unregister', unregisterServiceWorker)
+
+    // Listen for editor:lint event from CM6 linter
+    window.addEventListener('editor:lint', event => {
+      $scope.hasLintingError = event.detail.hasLintingError
+    })
 
     return ide.socket.on('project:publicAccessLevel:changed', data => {
       if (data.newAccessLevel != null) {

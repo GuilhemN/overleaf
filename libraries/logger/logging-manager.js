@@ -1,6 +1,5 @@
 const Stream = require('stream')
 const bunyan = require('bunyan')
-const yn = require('yn')
 const GCPManager = require('./gcp-manager')
 const SentryManager = require('./sentry-manager')
 const Serializers = require('./serializers')
@@ -74,20 +73,29 @@ const LoggingManager = {
   },
 
   _getOutputStreamConfig() {
-    const gcpEnabled = yn(process.env.GCP_LOGGING)
-    if (gcpEnabled) {
-      const stream = new Stream.Writable({
-        objectMode: true,
-        write(entry, encoding, callback) {
-          const gcpEntry = GCPManager.convertLogEntry(entry)
-          // eslint-disable-next-line no-console
-          console.log(JSON.stringify(gcpEntry, bunyan.safeCycles()))
-          setImmediate(callback)
-        },
-      })
-      return { level: this.defaultLevel, type: 'raw', stream }
-    } else {
-      return { level: this.defaultLevel, stream: process.stdout }
+    switch (process.env.LOGGING_FORMAT) {
+      case 'gke': {
+        const stream = new Stream.Writable({
+          objectMode: true,
+          write(entry, encoding, callback) {
+            const gcpEntry = GCPManager.convertLogEntry(entry)
+            // eslint-disable-next-line no-console
+            console.log(JSON.stringify(gcpEntry, bunyan.safeCycles()))
+            setImmediate(callback)
+          },
+        })
+        return { level: this.defaultLevel, type: 'raw', stream }
+      }
+      case 'gce': {
+        const { LoggingBunyan } = require('@google-cloud/logging-bunyan')
+        return new LoggingBunyan({
+          logName: this.loggerName,
+          serviceContext: { service: this.loggerName },
+        }).stream(this.defaultLevel)
+      }
+      default: {
+        return { level: this.defaultLevel, stream: process.stdout }
+      }
     }
   },
 
@@ -118,10 +126,16 @@ const LoggingManager = {
     if (this.isProduction) {
       switch (logLevelSource) {
         case 'file':
-          this.logLevelChecker = new FileLogLevelChecker(this.logger)
+          this.logLevelChecker = new FileLogLevelChecker(
+            this.logger,
+            this.defaultLevel
+          )
           break
         case 'gce_metadata':
-          this.logLevelChecker = new GCEMetadataLogLevelChecker(this.logger)
+          this.logLevelChecker = new GCEMetadataLogLevelChecker(
+            this.logger,
+            this.defaultLevel
+          )
           break
         case 'none':
           break

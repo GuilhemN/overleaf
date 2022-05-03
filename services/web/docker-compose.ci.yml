@@ -6,17 +6,22 @@ volumes:
 services:
 
   test_unit:
-    build: .
+    build:
+      context: ../..
+      dockerfile: services/web/Dockerfile
     image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
     user: node
     command: npm run test:unit:app
+    working_dir: /overleaf/services/web
     environment:
       BASE_CONFIG:
       SHARELATEX_CONFIG:
       NODE_OPTIONS: "--unhandled-rejections=strict"
 
   test_acceptance:
-    build: .
+    build:
+      context: ../..
+      dockerfile: services/web/Dockerfile
     image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
     working_dir: /overleaf/services/web
     env_file: docker-compose.common.env
@@ -35,8 +40,8 @@ services:
 
   test_karma:
     build:
-      context: .
-      dockerfile: Dockerfile.frontend.ci
+      context: ../..
+      dockerfile: services/web/Dockerfile.frontend.ci
       args:
         PROJECT_NAME: $PROJECT_NAME
         BRANCH_NAME: $BRANCH_NAME
@@ -48,12 +53,30 @@ services:
       NODE_OPTIONS: "--unhandled-rejections=strict"
 
   test_frontend:
-    build: .
+    build:
+      context: ../..
+      dockerfile: services/web/Dockerfile
     image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER
     user: node
+    working_dir: /overleaf/services/web
     command: npm run test:frontend
     environment:
       NODE_OPTIONS: "--unhandled-rejections=strict"
+
+  test_frontend_ct:
+    build:
+      context: .
+      dockerfile: ./Dockerfile.frontend_ct
+      args:
+        PROJECT_NAME: $PROJECT_NAME
+        BRANCH_NAME: $BRANCH_NAME
+        BUILD_NUMBER: $BUILD_NUMBER
+        CYPRESS_IMAGE: $CYPRESS_IMAGE
+    working_dir: /overleaf/services/web
+    entrypoint: npm
+    command:
+      - "run"
+      - "cypress:run-ct"
 
   tar:
     image: ci/$PROJECT_NAME:$BRANCH_NAME-$BUILD_NUMBER-webpack
@@ -71,6 +94,13 @@ services:
   ldap:
     restart: always
     image: rroemhild/test-openldap:1.1
+    # Workaround large memory allocation (using the max-open-files-limit as socket buffer scale).
+    # REF: https://github.com/moby/moby/issues/8231#issuecomment-63877553
+    # REF: https://github.com/moby/moby/issues/8231#issuecomment-63871343
+    command:
+      - 'bash'
+      - '-c'
+      - 'ulimit -n 1024 && exec bash /run.sh'
 
   saml:
       restart: always

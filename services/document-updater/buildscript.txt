@@ -3,6 +3,6 @@ document-updater
 --docker-repos=gcr.io/overleaf-ops
 --env-add=
 --env-pass-through=
---node-version=14.18.3
+--node-version=16.14.2
 --public-repo=True
---script-version=4.0.0
+--script-version=4.1.0

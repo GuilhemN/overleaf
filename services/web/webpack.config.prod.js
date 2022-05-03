@@ -1,13 +1,11 @@
-const merge = require('webpack-merge')
+const { merge } = require('webpack-merge')
 const TerserPlugin = require('terser-webpack-plugin')
-const OptimizeCssAssetsPlugin = require('optimize-css-assets-webpack-plugin')
+const CssMinimizerPlugin = require('css-minimizer-webpack-plugin')
 const MiniCssExtractPlugin = require('mini-css-extract-plugin')
 
 const base = require('./webpack.config')
 
-// Use "smart" merge: attempts to combine loaders targeting the same file type,
-// overriding the base config
-module.exports = merge.smart(
+module.exports = merge(
   base,
   {
     mode: 'production',
@@ -15,41 +13,16 @@ module.exports = merge.smart(
     // Enable a full source map. Generates a comment linking to the source map
     devtool: 'hidden-source-map',
 
-    output: {
-      // Override filename to include hash for immutable caching
-      filename: 'js/[name]-[chunkhash].js',
-    },
-
-    module: {
-      rules: [
-        {
-          // Override base font loading to add hash to filename so that we can
-          // use "immutable" caching
-          test: /\.(woff|woff2)$/,
-          use: [
-            {
-              loader: 'file-loader',
-              options: {
-                outputPath: 'fonts',
-                publicPath: '/fonts/',
-                name: '[name]-[hash]-1.[ext]',
-              },
-            },
-          ],
-        },
-      ],
-    },
-
     optimization: {
       // Minify JS (with Terser) and CSS (with cssnano)
       minimizer: [
         new TerserPlugin({
           terserOptions: {
-            keep_classnames: /Error$/,
-            keep_fnames: /Error$/,
+            keep_classnames: /(Error|Exception)$/,
+            keep_fnames: /(Error|Exception)$/,
           },
         }),
-        new OptimizeCssAssetsPlugin(),
+        new CssMinimizerPlugin(),
       ],
     },
 
@@ -58,7 +31,7 @@ module.exports = merge.smart(
       new MiniCssExtractPlugin({
         // Output to public/stylesheets directory and append hash for immutable
         // caching
-        filename: 'stylesheets/[name]-[chunkhash].css',
+        filename: 'stylesheets/[name]-[contenthash].css',
       }),
     ],
   },

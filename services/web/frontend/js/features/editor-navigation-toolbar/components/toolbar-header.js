@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next'
 import MenuButton from './menu-button'
 import CobrandingLogo from './cobranding-logo'
 import BackToProjectsButton from './back-to-projects-button'
+import UpgradePrompt from './upgrade-prompt'
 import ChatToggleButton from './chat-toggle-button'
 import LayoutDropdownButton from './layout-dropdown-button'
 import OnlineUsersWidget from './online-users-widget'
@@ -35,12 +36,10 @@ const ToolbarHeader = React.memo(function ToolbarHeader({
   renameProject,
   hasRenamePermissions,
   openShareModal,
-  pdfLayout,
   pdfViewIsOpen,
   pdfButtonIsVisible,
   togglePdfView,
   trackChangesVisible,
-  view,
 }) {
   const { t } = useTranslation()
   const shouldDisplayPublishButton = hasPublishPermissions && PublishButton
@@ -65,6 +64,9 @@ const ToolbarHeader = React.memo(function ToolbarHeader({
           onClick={togglePdfView}
           pdfViewIsOpen={pdfViewIsOpen}
         />
+      )}
+      {window.showHeaderUpgradePrompt && !pdfButtonIsVisible && (
+        <UpgradePrompt />
       )}
       <ProjectNameEditableLabel
         className="toolbar-center"
@@ -128,12 +130,10 @@ ToolbarHeader.propTypes = {
   renameProject: PropTypes.func.isRequired,
   hasRenamePermissions: PropTypes.bool,
   openShareModal: PropTypes.func.isRequired,
-  pdfLayout: PropTypes.string.isRequired,
   pdfViewIsOpen: PropTypes.bool,
   pdfButtonIsVisible: PropTypes.bool,
   togglePdfView: PropTypes.func.isRequired,
   trackChangesVisible: PropTypes.bool,
-  view: PropTypes.string,
 }
 
 export default ToolbarHeader
